@@ -4,6 +4,7 @@
 
 library("purrr")
 library(dplyr)
+library(ggplot2)
 
 setwd("H:/") # make sure directory is the same location as the plink application #
 ## Plink_ROH function is a function to use plink to search for ROH with different input files(vcf/bfile)and output file names 
@@ -60,7 +61,5 @@ pall_per_sim<-unlisted%>%select(simulation_num, pall)%>%
   dplyr::summarise(Mean_pall=mean(pall))#getting mean pall of simulation
 
 
-
-ggplot(aes=)
-
+#### Then can load more simulations e.g. neutral vs selection vs recomb to compare ####
 
