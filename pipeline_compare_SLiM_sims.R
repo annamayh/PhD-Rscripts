@@ -25,7 +25,7 @@ plink_ROH<-function(Input_file, Output_file){
 
 ## loop function over multiple files ##
 
-for (i in 1:20){
+#for (i in 1:20){
   
   vcf<-paste0("Neutral_model_outputs/neutral_m2_sim",i) ## all files in model output are called test_neutral_loop1 etc 
   output<-paste0("neutral_m2_sim",i,"_ROH_OUT") ## want output files to be numbered too 
@@ -117,10 +117,8 @@ mean(pall_per_sim_sel$Mean_pall)
 
 
 
-top_1_func<-function (x){quantile(x$pall, c(.99))}
-
 top_1_df_sel<-list()
-top_1_df_sel<-map(unaff_list_sel,top_1_func_sel)%>%bind_rows(.id = "Value")
+top_1_df_sel<-map(unaff_list_sel,top_1_func)%>%bind_rows(.id = "Value")
 names(top_1_df_sel)<-(c("sim","Top_1"))
 
 mean(top_1_df_sel$Top_1)
