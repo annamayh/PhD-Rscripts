@@ -4,6 +4,7 @@ library(dplyr)
 library(plyr)
 library(ggplot2)
 library(forcats)
+library(wesanderson)
 
 setwd("H:/")
 
