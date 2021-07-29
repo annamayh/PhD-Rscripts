@@ -56,7 +56,7 @@ rum_CM <- ggplot(rum_sub, aes(order, pall)) +
   geom_point() +
   theme_classic()+
   labs(x = "SNP order", y = "P") +
-  geom_hline(yintercept = 0.1471829, linetype="dashed", color = "red") +
+  geom_hline(yintercept = 0.1486795, linetype="dashed", color = "red") +
   geom_hline(yintercept = 0, linetype = "dashed", colour = "red") +
   geom_hline(yintercept = 0.06085681, colour = "red")+
   theme(axis.text.x=element_blank(),
@@ -105,6 +105,8 @@ unique(coldspots_BP_kint$CHR)
 
 Rum_hotspots_shared<- join(hotspots_CM_Rum,hotspots_BP_Rum)%>%na.omit()
 
+BP_hotspots_shared<-join(hotspots_BP_Rum,hotspots_BP_kint)%>%na.omit()
+
 ###################################################################################################################
 
 
@@ -124,7 +126,7 @@ rum_BP <- ggplot(rum_sub_BP, aes(BP, pall)) +
   geom_point() +
   theme_classic()+
   labs(x = "SNP order", y = "P") +
-  geom_hline(yintercept = 0.1436224, linetype="dashed", color = "red") +
+  geom_hline(yintercept = 0.146667754, linetype="dashed", color = "red") +
   geom_hline(yintercept = 0, linetype = "dashed", colour = "red") +
   geom_hline(yintercept = 0.05770727, colour = "red")+
   theme(axis.text.x=element_blank(),
