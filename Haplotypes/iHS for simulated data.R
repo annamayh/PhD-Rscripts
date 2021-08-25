@@ -12,7 +12,7 @@ library(stringdist)
 
 setwd("H:/PHD_2ndYR")
 
-output_haplohh<-list()
+scan_output<-list()
 
 for(k in 1:27) {
   if (k==20) next ## for failed simulations on dud machine
@@ -22,28 +22,26 @@ for(k in 1:27) {
   # haplotype file name for each chromosome
   hap_file_input = paste0("Slim/Ash_server_output/neutral/SLiM_raw_output/neutral_sim",k)
   # create internal representation
-  output_haplohh[[k]] <- data2haplohh(hap_file = hap_file_input,
+  hh <- data2haplohh(hap_file = hap_file_input,
                      polarize_vcf = FALSE,
                      vcf_reader = "data.table", 
                      remove_multiple_markers = TRUE
                      )
   # perform scan on a single chromosome (calculate iHH values)
-  scan <- scan_hh(hh)
-  scan$sim<-k
+  scan_output[[k]] <- scan_hh(hh)
+  scan_output[[k]]$sim<-k
   
-  ihs<-ihh2ihs(scan)
-  
-  if (k == 1) {
-    ihs_all_sims <- ihs
-  } else {
-    ihs_all_sims <- rbind(ihs_all_sims, ihs)
-  }
-}
+}  
+
+names(scan_output)<-paste0("Sim_num",1:21) #naming the list elements based on the simulation number 
+
+scan_output["Sim_num20"]<-NULL
+scan_output["Sim_num22"]<-NULL #remove the simulations that didnt work on dud machine
+scan_output["Sim_num25"]<-NULL
+scan_output["Sim_num26"]<-NULL ## this sometimes doesnt work??
 
 
 
+iHS_list<-map(scan_output, ihh2ihs)
 
-iHS_all_sims<-as.data.frame(ihs_all_sims)
-
-ihs_SNPs<-tibble::rownames_to_column(iHS_genomewide, "SNP")
 
