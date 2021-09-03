@@ -38,13 +38,13 @@ unlist_then_get_mean_pall_per_sim<-function(listed_sims){
 
 
 #func to get top 1% in a datafram
-top_1_func<-function (x){quantile(x$pall, c(.99))}
+top_1_func<-function (x){quantile(x$pall, c(.01,.99))}
 
 #function using function above to apply to all dataframes in a list of iterations
 get_top1_pall<-function(iteration_list){
   
   map(iteration_list,top_1_func)%>%bind_rows(.id = "Value")%>%
-    setNames(.,c("simulation_num","Top_1"))
+    setNames(.,c("simulation_num","Bottom_1","Top_1"))
     
   
 }
@@ -56,25 +56,25 @@ get_top1_pall<-function(iteration_list){
 ######## load all simulation files in #####
 
 ## neutral model
-neutral_list <- lapply(Sys.glob("PHD_2ndYR/Slim/Output/ROH_output/neutral_m6_sim*_ROH_OUT.hom.summary"), read.table, header = TRUE, stringsAsFactors=FALSE)
+neutral_list <- lapply(Sys.glob("PHD_2ndYR/Slim/Ash_server_output/neutral/neutral*/*.hom.summary"), read.table, header = TRUE, stringsAsFactors=FALSE)
 for (i in 1:length(neutral_list)){
   neutral_list[[i]]$simulation_num<-i #adding sim number for grouping later
 } 
 
 #recombination model
-recomb_list <- lapply(Sys.glob("PHD_2ndYR/Slim/Ash_server_output/Sel_recomb/sel_recomb_*/sel_recomb_ROH_out*.hom.summary"), read.table, header = TRUE, stringsAsFactors=FALSE)
+recomb_list <- lapply(Sys.glob("PHD_2ndYR/Slim/Ash_server_output/recomb/*/*.hom.summary"), read.table, header = TRUE, stringsAsFactors=FALSE)
 for (i in 1:length(recomb_list)){
   recomb_list[[i]]$simulation_num<-i #adding sim number for grouping later
 } 
 
 ### selection only
-sel_list <- lapply(Sys.glob("PHD_2ndYR/Slim/Ash_server_output/Sel_d0.1/sel_d0.1_*/sel_d0.1ROH_out*.hom.summary"), read.table, header = TRUE, stringsAsFactors=FALSE)
+sel_list <- lapply(Sys.glob("PHD_2ndYR/Slim/Ash_server_output/Sel_d0.1/hom_summary_files/*.hom.summary"), read.table, header = TRUE, stringsAsFactors=FALSE)
 for (i in 1:length(sel_list)){
   sel_list[[i]]$simulation_num<-i #adding sim number for grouping later
 } 
 
 #selection and recombination
-sel_reomb_list <- lapply(Sys.glob("PHD_2ndYR/Slim/Ash_server_output/Sel_recomb_d0.1/sel_recomb_d0.1_*/sel_recomb_d0.1ROH_out*.hom.summary"), read.table, header = TRUE, stringsAsFactors=FALSE)
+sel_reomb_list <- lapply(Sys.glob("PHD_2ndYR/Slim/Ash_server_output/Sel_recomb_d0.1/*/*.hom.summary"), read.table, header = TRUE, stringsAsFactors=FALSE)
 for (i in 1:length(sel_reomb_list)){
   sel_reomb_list[[i]]$simulation_num<-i #adding sim number for grouping later
 } 
@@ -147,6 +147,10 @@ for (i in 1:length(NObottleneck_s0.05_r)){
 }
 ###########################################################################################
 
+#save.image(file="PHD_2ndYR/Slim/List_all_SLiM_output.RData")
+
+load("PHD_2ndYR/Slim/List_all_SLiM_output.RData")
+
 ## rum pop history simulations
 pall_neutral<-neutral_list%>%map(add_pall)%>%unlist_then_get_mean_pall_per_sim
 pall_recomb<-recomb_list%>%map(add_pall)%>%unlist_then_get_mean_pall_per_sim
@@ -170,7 +174,7 @@ pall_neutral$Model<-"Neutral"
 pall_recomb$Model<-"Varied\nRecomb"
 pall_sel$Model<-"Selection"
 pall_sel_recomb$Model<-"Varied\nrecomb\n+ selection"
-pall_sel_s0.05$Model<-"Higher\nselection\ncoefficients"
+pall_sel_s0.05$Model<-"Varied\nrecomb\n+Stronger\nselection"
 
 pall_neutral$Pop_History<-"Rum"
 pall_recomb$Pop_History<-"Rum"
@@ -202,7 +206,7 @@ pall_bottleneck$Model<-"Neutral"
 pall_bottleneck_sel$Model<-"Selection"
 pall_bottleneck_recomb$Model<-"Varied\nRecomb"
 pall_bottleneck_s_r$Model<-"Varied\nrecomb\n+ selection"
-pall_bottleneck_s0.05_r$Model<-"Higher\nselection\ncoefficients"
+pall_bottleneck_s0.05_r$Model<-"Varied\nrecomb\n+Stronger\nselection"
 
 pall_bottleneck$Pop_History<-"Severe bottleneck"
 pall_bottleneck_sel$Pop_History<-"Severe bottleneck"
@@ -217,11 +221,11 @@ pall_nobtl_recomb<-NObottleneck_recomb%>%map(add_pall_2000)%>%unlist_then_get_me
 pall_nobtl_s_r<-NObottleneck_s_r%>%map(add_pall_2000)%>%unlist_then_get_mean_pall_per_sim
 pall_nobtl_s0.05_r<-NObottleneck_s0.05_r%>%map(add_pall_2000)%>%unlist_then_get_mean_pall_per_sim
 
-NOBtl_top1_neutral<-Nobottleneck%>%map(add_pall)%>%get_top1_pall()
-NOBtl_top1_sel<-NObottleneck_sel%>%map(add_pall)%>%get_top1_pall()
-NOBtl_top1_recomb<-NObottleneck_recomb%>%map(add_pall)%>%get_top1_pall()
-NOBtl_top1_sel_recomb<-NObottleneck_s_r%>%map(add_pall)%>%get_top1_pall()
-NOBtl_top1_sel_s0.05<-NObottleneck_s0.05_r%>%map(add_pall)%>%get_top1_pall()
+NOBtl_top1_neutral<-Nobottleneck%>%map(add_pall_2000)%>%get_top1_pall()
+NOBtl_top1_sel<-NObottleneck_sel%>%map(add_pall_2000)%>%get_top1_pall()
+NOBtl_top1_recomb<-NObottleneck_recomb%>%map(add_pall_2000)%>%get_top1_pall()
+NOBtl_top1_sel_recomb<-NObottleneck_s_r%>%map(add_pall_2000)%>%get_top1_pall()
+NOBtl_top1_sel_s0.05<-NObottleneck_s0.05_r%>%map(add_pall_2000)%>%get_top1_pall()
 
 pall_nobtl<-join(pall_nobtl,NOBtl_top1_neutral)%>%mutate(diff=Top_1-Mean_pall)
 pall_nobtl_sel<-join(pall_nobtl_sel,NOBtl_top1_sel)%>%mutate(diff=Top_1-Mean_pall)
@@ -233,7 +237,7 @@ pall_nobtl$Model<-"Neutral"
 pall_nobtl_sel$Model<-"Selection"
 pall_nobtl_recomb$Model<-"Varied\nRecomb"
 pall_nobtl_s_r$Model<-"Varied\nrecomb\n+ selection"
-pall_nobtl_s0.05_r$Model<-"Higher\nselection\ncoefficients"
+pall_nobtl_s0.05_r$Model<-"Varied\nrecomb\n+Stronger\nselection"
 
 pall_nobtl$Pop_History<-"No bottleneck"
 pall_nobtl_sel$Pop_History<-"No bottleneck"
@@ -250,29 +254,26 @@ plot_pall<-rbind(pall_neutral,pall_recomb,pall_sel,pall_sel_recomb,pall_sel_s0.0
                       pall_nobtl,pall_nobtl_sel,pall_nobtl_recomb,pall_nobtl_s_r,pall_nobtl_s0.05_r)
 
 
-plot_pall%>%
-  mutate(Model = fct_relevel(Model, "Neutral","Selection","Varied \nRecomb","Varied \nrecomb \n+ selection","Higher \nselection \ncoefficients"))%>%
-  mutate(Pop_History = fct_relevel(Pop_History,"Rum","Severe bottleneck","No bottleneck"))%>%
-  ggplot(aes(x=Model, y=Mean_pall, colour=Pop_History))+
-  geom_boxplot()+
-  theme_bw()+
-  geom_jitter(size=1.5, alpha=0.9)+
-  scale_fill_brewer(palette = "Pastel2")+
-  xlab("Simulation Model")+
-  ylab("Mean proportion of individuals with ROH at a SNP per simulation")+
-  theme(
-    axis.title.x = element_text(size=12),
-    axis.title.y = element_text(size=12),
-    axis.text.x = element_text(face="bold"),
-    axis.text.y = element_text(face="bold")
-    
-  )+
-  facet_wrap(~Pop_History)
-  
+no_bottle<-rbind(pall_nobtl,pall_nobtl_sel,pall_nobtl_recomb,pall_nobtl_s_r,pall_nobtl_s0.05_r)
 
+## This function allows us to specify which facet to annotate
+annotation_custom2 <- function (grob, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, data) 
+{
+  layer(data = data, stat = StatIdentity, position = PositionIdentity, 
+        geom = ggplot2:::GeomCustomAnn,
+        inherit.aes = TRUE, params = list(grob = grob, 
+                                          xmin = xmin, xmax = xmax, 
+                                          ymin = ymin, ymax = ymax))
+}
 
-plot_pall_mean%>%
-  mutate(Model = fct_relevel(Model, "Neutral","Selection","Varied\nRecomb","Varied\nrecomb\n+ selection","Higher\nselection\ncoefficients"))%>%
+mean_ann_text <- data.frame(Model = "Selection",Mean_pall = 0.075,lab = "Rum actual value",
+                       Pop_History = factor("No bottleneck",levels = c("Rum","Severe bottleneck","No bottleneck")))
+
+mean_ann_text_kint <- data.frame(Model = "Selection",Mean_pall = 0.0455,lab = "Kintyre actual value",
+                            Pop_History = factor("No bottleneck",levels = c("Rum","Severe bottleneck","No bottleneck")))
+
+Mean<-plot_pall%>%
+  mutate(Model = fct_relevel(Model, "Neutral","Selection","Varied\nRecomb","Varied\nrecomb\n+ selection","Varied\nrecomb\n+Stronger\nselection"))%>%
   mutate(Pop_History = fct_relevel(Pop_History,"Rum","Severe bottleneck","No bottleneck"))%>%
   ggplot(aes(x=Model, y=Mean_pall, fill=Model))+
   geom_violin(position="dodge", alpha=0.5)+
@@ -280,6 +281,7 @@ plot_pall_mean%>%
   scale_fill_manual(values = wes_palette("Darjeeling1", n=5))+
   xlab("Simulation Model")+
   ylab("Mean proportion of individuals with ROH at a SNP per simulation")+
+  labs(tag = "A")+
   theme(
     axis.title.x = element_text(size=12),
     axis.title.y = element_text(size=10),
@@ -288,14 +290,48 @@ plot_pall_mean%>%
     
   )+
   facet_wrap(~Pop_History)+
-  theme(legend.position = "none")
+  theme(legend.position = "none")+
+  stat_summary(fun=mean, geom="point",size=2)+
+  geom_hline(yintercept = 0.064, linetype=4, color = "black", size = 1)+
+  geom_hline(yintercept = 0.034, linetype=5, color = "black", size = 1)+
+  geom_text(data = mean_ann_text,label = "Rum actual value")+
+  geom_text(data = mean_ann_text_kint,label = "Kintyre actual value")
+  annotation_custom2(grob=ggplotGrob(inset_mean), 
+                     data = data.frame(Model="No bottleneck", Mean_pall=0.2),
+                     ymin = 0.2, ymax=0.4, xmin="Varied\nRecomb", xmax="Varied\nrecomb\n+Stronger\nselection")
+
+
+
+inset_mean<-no_bottle%>%
+  mutate(Model = fct_relevel(Model, "Neutral","Selection","Varied\nRecomb","Varied\nrecomb\n+ selection","Varied\nrecomb\n+Stronger\nselection"))%>%
+  ggplot(aes(x=Model, y=Bottom_1, fill=Model))+
+  geom_violin(position="dodge", alpha=0.5)+
+  theme_classic()+
+  scale_fill_manual(values = wes_palette("Darjeeling1", n=5))+
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(), 
+    axis.text.x = element_blank(), 
+    axis.text = element_text(size=20)
+    
+  )+
+  theme(legend.position = "none")+
+  stat_summary(fun=mean, geom="point",size=2)
+  
+
+
 
 ###################################################################################################################################
 
+top_ann_text <- data.frame(Model = "Selection",Top_1 = 0.17,lab = "Rum actual value",
+                            Pop_History = factor("No bottleneck",levels = c("Rum","Severe bottleneck","No bottleneck")))
+
+top_ann_text_kint <- data.frame(Model = "Selection",Top_1 = 0.105,lab = "Kintyre actual value",
+                                 Pop_History = factor("No bottleneck",levels = c("Rum","Severe bottleneck","No bottleneck")))
 
 ## plotting top 1%
-plot_pall%>%
-  mutate(Model = fct_relevel(Model, "Neutral","Selection","Varied\nRecomb","Varied\nrecomb\n+ selection","Higher\nselection\ncoefficients"))%>%
+Top_1<-plot_pall%>%
+  mutate(Model = fct_relevel(Model, "Neutral","Selection","Varied\nRecomb","Varied\nrecomb\n+ selection","Varied\nrecomb\n+Stronger\nselection"))%>%
   mutate(Pop_History = fct_relevel(Pop_History,"Rum","Severe bottleneck","No bottleneck"))%>%
   ggplot(aes(x=Model, y=Top_1, fill=Model))+
   geom_violin(position="dodge", alpha=0.5)+
@@ -303,6 +339,7 @@ plot_pall%>%
   scale_fill_manual(values = wes_palette("Darjeeling1", n=5))+
   xlab("Simulation Model")+
   ylab("Top 1% proportion of individuals with ROH \nat a SNP (hotspot threshold) per simulation")+
+  labs(tag = "B")+
   theme(
     axis.title.x = element_text(size=12),
     axis.title.y = element_text(size=10),
@@ -311,7 +348,37 @@ plot_pall%>%
     
   )+
   facet_wrap(~Pop_History)+
-  theme(legend.position = "none")
+  theme(legend.position = "none")+
+  stat_summary(fun=mean, geom="point",size=2)+ # adds the mean dot 
+  geom_hline(yintercept = 0.149, linetype=4, color = "black", size = 1)+
+  geom_hline(yintercept = 0.083, linetype=5, color = "black", size = 1)+
+  geom_text(data = top_ann_text,label = "Rum actual value")+
+  geom_text(data = top_ann_text_kint,label = "Kintyre actual value")
+
+
+
+
+### plotting bottom 1%
+
+plot_pall%>%
+  mutate(Model = fct_relevel(Model, "Neutral","Selection","Varied\nRecomb","Varied\nrecomb\n+ selection","Higher\nselection\ncoefficients"))%>%
+  mutate(Pop_History = fct_relevel(Pop_History,"Rum","Severe bottleneck","No bottleneck"))%>%
+  ggplot(aes(x=Model, y=Bottom_1, fill=Model))+
+  geom_violin(position="dodge", alpha=0.5)+
+  theme_bw()+
+  scale_fill_manual(values = wes_palette("Darjeeling1", n=5))+
+  xlab("Simulation Model")+
+  ylab("Bottom 1 % with ROH at a SNP per simulation")+
+  theme(
+    axis.title.x = element_text(size=12),
+    axis.title.y = element_text(size=10),
+    axis.text.x = element_text(face="bold"),
+    axis.text.y = element_text(face="bold")
+    
+  )+
+  facet_wrap(~Pop_History)+
+  theme(legend.position = "none")+
+  stat_summary(fun.y=mean, geom="point",size=2)
 
 
 #### plotting difference between top 1% and mean
@@ -332,4 +399,6 @@ plot_pall%>%
     
   )+
   facet_wrap(~Pop_History)+
-  theme(legend.position = "none")
+  theme(legend.position = "none")+
+  stat_summary(fun=mean, geom="point",size=2)
+
