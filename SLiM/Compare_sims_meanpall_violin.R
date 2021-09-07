@@ -5,6 +5,7 @@ library(plyr)
 library(ggplot2)
 library(forcats)
 library(wesanderson)
+library(patchwork)
 
 setwd("H:/")
 
@@ -266,27 +267,27 @@ annotation_custom2 <- function (grob, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax
                                           ymin = ymin, ymax = ymax))
 }
 
-mean_ann_text <- data.frame(Model = "Selection",Mean_pall = 0.075,lab = "Rum actual value",
+mean_ann_text <- data.frame(Model = "Selection",Mean_pall = 0.0755,lab = "Rum actual value",
                        Pop_History = factor("No bottleneck",levels = c("Rum","Severe bottleneck","No bottleneck")))
 
-mean_ann_text_kint <- data.frame(Model = "Selection",Mean_pall = 0.0455,lab = "Kintyre actual value",
+mean_ann_text_kint <- data.frame(Model = "Selection",Mean_pall = 0.0458,lab = "Kintyre actual value",
                             Pop_History = factor("No bottleneck",levels = c("Rum","Severe bottleneck","No bottleneck")))
 
-Mean<-plot_pall%>%
+Mean_plot<-plot_pall%>%
   mutate(Model = fct_relevel(Model, "Neutral","Selection","Varied\nRecomb","Varied\nrecomb\n+ selection","Varied\nrecomb\n+Stronger\nselection"))%>%
-  mutate(Pop_History = fct_relevel(Pop_History,"Rum","Severe bottleneck","No bottleneck"))%>%
+  mutate(Pop_History = fct_relevel(Pop_History,"Severe bottleneck","Rum","No bottleneck"))%>%
   ggplot(aes(x=Model, y=Mean_pall, fill=Model))+
   geom_violin(position="dodge", alpha=0.5)+
   theme_bw()+
   scale_fill_manual(values = wes_palette("Darjeeling1", n=5))+
   xlab("Simulation Model")+
-  ylab("Mean proportion of individuals with ROH at a SNP per simulation")+
+  ylab("Mean proportion of individuals with ROH at a SNP\n per simulation")+
   labs(tag = "A")+
   theme(
-    axis.title.x = element_text(size=12),
+    axis.title.x = element_blank(),
     axis.title.y = element_text(size=10),
-    axis.text.x = element_text(face="bold"),
-    axis.text.y = element_text(face="bold")
+    axis.text.y = element_text(face="bold"),
+    axis.text.x = element_text(face="bold")
     
   )+
   facet_wrap(~Pop_History)+
@@ -332,13 +333,13 @@ top_ann_text_kint <- data.frame(Model = "Selection",Top_1 = 0.105,lab = "Kintyre
 ## plotting top 1%
 Top_1<-plot_pall%>%
   mutate(Model = fct_relevel(Model, "Neutral","Selection","Varied\nRecomb","Varied\nrecomb\n+ selection","Varied\nrecomb\n+Stronger\nselection"))%>%
-  mutate(Pop_History = fct_relevel(Pop_History,"Rum","Severe bottleneck","No bottleneck"))%>%
+  mutate(Pop_History = fct_relevel(Pop_History,"Severe bottleneck","Rum","No bottleneck"))%>%
   ggplot(aes(x=Model, y=Top_1, fill=Model))+
   geom_violin(position="dodge", alpha=0.5)+
   theme_bw()+
   scale_fill_manual(values = wes_palette("Darjeeling1", n=5))+
   xlab("Simulation Model")+
-  ylab("Top 1% proportion of individuals with ROH \nat a SNP (hotspot threshold) per simulation")+
+  ylab("99th percentile proportion of individuals with ROH \nat a SNP (hotspot threshold) per simulation")+
   labs(tag = "B")+
   theme(
     axis.title.x = element_text(size=12),
@@ -356,6 +357,8 @@ Top_1<-plot_pall%>%
   geom_text(data = top_ann_text_kint,label = "Kintyre actual value")
 
 
+
+Mean_plot/Top_1
 
 
 ### plotting bottom 1%
