@@ -17,17 +17,21 @@ se(CMpall$pall)
 quantile(CMpall$pall, c(.01, .99)) ## 
 length(which(CMpall$pall > 0.1486795)) ##
 length(which(CMpall$pall <= 0)) ## 
-hotspots_CM_Rum<-subset(CMpall, pall > 0.1486795) %>%rename(pall_Rum=pall)%>%select(pall_Rum, SNP, CHR)
+hotspots_CM_Rum<-subset(CMpall, pall > 0.1486795) %>%dplyr::rename(pall_Rum=pall)%>%select(pall_Rum, SNP, CHR)
 unique(hotspots_CM_Rum$CHR)
 coldspots_CM_Rum<-subset(CMpall, pall <=0) 
 unique(coldspots_CM_Rum$CHR)
+
+#write.table(hotspots_CM_Rum,
+ #                      file = "Rum_hotspots_cM.txt",
+  #                    row.names = F, quote = F, sep = "\t")
 
 #stats for Kint pop using genetic map
 mean(CMpall_main$pall) 
 quantile(CMpall_main$pall, c(.01, .99)) ## 
 length(which(CMpall_main$pall > 0.08280255)) ##
 length(which(CMpall_main$pall <= 0)) ## 
-hotspots_CM_kint<-subset(CMpall_main, pall > 0.08280255)%>%rename(pall_kint=pall)%>%select(pall_kint, SNP, CHR)
+hotspots_CM_kint<-subset(CMpall_main, pall > 0.08280255)%>%dplyr::rename(pall_kint=pall)%>%select(pall_kint, SNP, CHR)
 unique(hotspots_CM_kint$CHR)
 coldspots_CM_kint<-subset(CMpall_main, pall <= 0) 
 unique(coldspots_CM_kint$CHR)
@@ -35,7 +39,7 @@ unique(coldspots_CM_kint$CHR)
 
 ## shared hotspots between two pops using cM map
 
-CM_hot_shared_pops<-join(hotspots_CM_kint,hotspots_CM_Rum)#%>%na.omit()
+
 #### figures to compare maps using cM ####
 
 main_sub <- subset(CMpall_main, CHR == "18")
@@ -43,7 +47,7 @@ main_sub$order<-1:nrow(main_sub)
 mainland_CM<-ggplot(main_sub, aes(order, pall)) +
   geom_point() +
   theme_classic()+
-  labs(x = "SNP order", y = "P") +
+  labs(x = "SNP order", y = "PropROH") +
   geom_hline(yintercept = 0.03199692,  color = "red") +
   geom_hline(yintercept = 0, linetype = "dashed", colour = "red") +
   geom_hline(yintercept = 0.08280255, linetype="dashed",colour = "red")+
@@ -55,12 +59,13 @@ rum_sub$order<-1:nrow(rum_sub)
 rum_CM <- ggplot(rum_sub, aes(order, pall)) +
   geom_point() +
   theme_classic()+
-  labs(x = "SNP order", y = "P") +
+  labs(x = "SNP order", y = "PropROH") +
   geom_hline(yintercept = 0.1486795, linetype="dashed", color = "red") +
   geom_hline(yintercept = 0, linetype = "dashed", colour = "red") +
   geom_hline(yintercept = 0.06085681, colour = "red")+
   theme(axis.text.x=element_blank(),
-        axis.ticks.x=element_blank())
+        axis.ticks.x=element_blank(), 
+        axis.title.x = element_blank())
 
 
 
@@ -85,7 +90,7 @@ se(BP_palls$pall)
 quantile(BP_palls$pall, c(.01, .99)) ## 
 length(which(BP_palls$pall > 0.146667754)) ##
 length(which(BP_palls$pall < 0.000652103)) ## 
-hotspots_BP_Rum<-subset(BP_palls, pall > 0.146667754)%>%rename(pall_Rum_BP=pall)%>%select(pall_Rum_BP, SNP, CHR)
+hotspots_BP_Rum<-subset(BP_palls, pall > 0.146667754)%>%dplyr::rename(pall_Rum_BP=pall)%>%select(pall_Rum_BP, SNP, CHR)
 unique(hotspots_BP_Rum$CHR)
 coldspots_BP_Rum<-subset(BP_palls, pall <= 0) 
 unique(coldspots_BP_Rum$CHR)
@@ -96,41 +101,49 @@ se(BP_pall_main$pall)
 quantile(BP_pall_main$pall, c(.01, .99)) ## 
 length(which(BP_pall_main$pall > 0.0955414)) ##
 length(which(BP_pall_main$pall <= 0)) ## 
-hotspots_BP_kint<-subset(BP_pall_main, pall > 0.0955414)%>%rename(pall_kint_BP=pall)%>%select(pall_kint_BP, SNP, CHR)
+hotspots_BP_kint<-subset(BP_pall_main, pall > 0.0955414)%>%dplyr::rename(pall_kint_BP=pall)%>%select(pall_kint_BP, SNP, CHR)
 unique(hotspots_BP_kint$CHR)
 coldspots_BP_kint<-subset(BP_pall_main, pall <= 0) 
 unique(coldspots_BP_kint$CHR)
 
 
 
-Rum_hotspots_shared<- join(hotspots_CM_Rum,hotspots_BP_Rum)%>%na.omit()
-
-BP_hotspots_shared<-join(hotspots_BP_Rum,hotspots_BP_kint)%>%na.omit()
+Rum_hotspots_shared<- join(hotspots_CM_Rum,hotspots_BP_Rum)%>%na.omit() #Rum cm vs Rum BP
+Kint_hotspots_shared<-join(hotspots_CM_kint,hotspots_BP_kint)%>%na.omit() #Kint CM vs Kint BP
+CM_hot_shared_pops<-join(hotspots_CM_kint,hotspots_CM_Rum)%>%na.omit() #Kint CM vs Rum cm
+BP_hotspots_shared<-join(hotspots_BP_Rum,hotspots_BP_kint)%>%na.omit() #Kint BP vs Rum BP
 
 ###################################################################################################################
 
 
 main_sub_BP <- subset(BP_pall_main, CHR == "18")
-mainland_BP<-ggplot(main_sub_BP, aes(BP, pall)) +
+main_sub_BP$order<-1:nrow(main_sub_BP)
+mainland_BP<-ggplot(main_sub_BP, aes(order, pall)) +
   geom_point() +
   theme_classic()+
-  labs(x = "SNP order", y = "P") +
+  labs(x = "SNP order", y = "PropROH") +
   geom_hline(yintercept = 0.02929397,  color = "red") +
   geom_hline(yintercept = 0, linetype = "dashed", colour = "red") +
   geom_hline(yintercept = 0.0955414, linetype="dashed",colour = "red") +
+  geom_ribbon(aes(xmin=308, xmax=354), alpha=0.25) + #adds higlighted region
   theme(axis.text.x=element_blank(),
-        axis.ticks.x=element_blank())
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_blank())
 
 rum_sub_BP <- subset(BP_palls, CHR == "18")
-rum_BP <- ggplot(rum_sub_BP, aes(BP, pall)) +
+rum_sub_BP$order<-1:nrow(rum_sub_BP)
+rum_BP <- ggplot(rum_sub_BP, aes(order, pall)) +
   geom_point() +
   theme_classic()+
-  labs(x = "SNP order", y = "P") +
+  labs(x = "SNP order", y = "PropROH") +
   geom_hline(yintercept = 0.146667754, linetype="dashed", color = "red") +
   geom_hline(yintercept = 0, linetype = "dashed", colour = "red") +
   geom_hline(yintercept = 0.05770727, colour = "red")+
+  geom_ribbon(aes(xmin=320, xmax=364), alpha=0.25) +
   theme(axis.text.x=element_blank(),
-        axis.ticks.x=element_blank())
+        axis.ticks.x=element_blank(),
+        axis.title.x = element_blank(), 
+        axis.title.y = element_blank())
   
 
 
