@@ -62,18 +62,6 @@ for (i in 1:length(neutral_list)){
   neutral_list[[i]]$simulation_num<-i #adding sim number for grouping later
 } 
 
-#recombination model
-#recomb_list <- lapply(Sys.glob("PHD_2ndYR/Slim/Ash_server_output/recomb/*/*.hom.summary"), read.table, header = TRUE, stringsAsFactors=FALSE)
-#for (i in 1:length(recomb_list)){
-  #recomb_list[[i]]$simulation_num<-i #adding sim number for grouping later
-#} 
-
-### selection only
-#sel_list <- lapply(Sys.glob("PHD_2ndYR/Slim/Ash_server_output/Sel_d0.1/hom_summary_files/*.hom.summary"), read.table, header = TRUE, stringsAsFactors=FALSE)
-#for (i in 1:length(sel_list)){
-#  sel_list[[i]]$simulation_num<-i #adding sim number for grouping later
-#} 
-
 #selection and recombination
 sel_reomb_list <- lapply(Sys.glob("PHD_2ndYR/Slim/Ash_server_output/Ne7500/Rum/sel_recomb/sel_recomb_*/ROH_out*.hom.summary"), read.table, header = TRUE, stringsAsFactors=FALSE)
 for (i in 1:length(sel_reomb_list)){
@@ -93,18 +81,6 @@ bottleneck <- lapply(Sys.glob("PHD_2ndYR/Slim/Ash_server_output/Ne7500/btl/Neutr
 for (i in 1:length(bottleneck)){
   bottleneck[[i]]$simulation_num<-i #adding sim number for grouping later
 }
-
-## bottleneck selection
-#bottleneck_sel <- lapply(Sys.glob("PHD_2ndYR/Slim/Ash_server_output/Btl_sel/Btl_sel_*/ROH_out_sim*.hom.summary"), read.table, header = TRUE, stringsAsFactors=FALSE)
-#for (i in 1:length(bottleneck_sel)){
-#  bottleneck_sel[[i]]$simulation_num<-i #adding sim number for grouping later
-#}
-
-## bottleneck recomb
-#bottleneck_recomb <- lapply(Sys.glob("PHD_2ndYR/Slim/Ash_server_output/Btl_recomb/Btl_recomb_*/ROH_out_sim*.hom.summary"), read.table, header = TRUE, stringsAsFactors=FALSE)
-#for (i in 1:length(bottleneck_recomb)){
-#  bottleneck_recomb[[i]]$simulation_num<-i #adding sim number for grouping later
-#}
 
 ##bottlneck s+r
 bottleneck_s_r <- lapply(Sys.glob("PHD_2ndYR/Slim/Ash_server_output/Ne7500/btl/Sel_recomb/sel_recomb_*/ROH_out*.hom.summary"), read.table, header = TRUE, stringsAsFactors=FALSE)
@@ -126,19 +102,6 @@ for (i in 1:length(Nobottleneck)){
   Nobottleneck[[i]]$simulation_num<-i #adding sim number for grouping later
 }
 
- 
-## NO bottleneck selection
-#NObottleneck_sel <- lapply(Sys.glob("PHD_2ndYR/Slim/Ash_server_output/Nobtl/Nobtl/Neutral_nobtl_*/ROH_out_sim*.hom.summary"), read.table, header = TRUE, stringsAsFactors=FALSE)
-#for (i in 1:length(NObottleneck_sel)){
-#  NObottleneck_sel[[i]]$simulation_num<-i #adding sim number for grouping later
-#}
-
-## NO bottleneck recomb
-#NObottleneck_recomb <- lapply(Sys.glob("PHD_2ndYR/Slim/Ash_server_output/NOBtl_recomb/NOBtl_recomb_*/ROH_out_sim*.hom.summary"), read.table, header = TRUE, stringsAsFactors=FALSE)
-#for (i in 1:length(NObottleneck_recomb)){
-#  NObottleneck_recomb[[i]]$simulation_num<-i #adding sim number for grouping later
-#}
-
 ##NObottlneck s+r
 NObottleneck_s_r <- lapply(Sys.glob("PHD_2ndYR/Slim/Ash_server_output/Ne7500/Nobtl/Nobtl/sel_recomb*/sel_recomb_*/ROH_out*.hom.summary"), read.table, header = TRUE, stringsAsFactors=FALSE)
 for (i in 1:length(NObottleneck_s_r)){
@@ -154,99 +117,69 @@ for (i in 1:length(NObottleneck_s0.05_r)){
 
 #save.image(file="PHD_2ndYR/Slim/List_SLiM_output_new_sims.RData")
 
-load("PHD_2ndYR/Slim/List_all_SLiM_output.RData")
+#load("PHD_2ndYR/Slim/List_all_SLiM_output.RData")
 
 ## rum pop history simulations
 pall_neutral<-neutral_list%>%map(add_pall)%>%unlist_then_get_mean_pall_per_sim
-#pall_recomb<-recomb_list%>%map(add_pall)%>%unlist_then_get_mean_pall_per_sim
-#pall_sel<-sel_list%>%map(add_pall)%>%unlist_then_get_mean_pall_per_sim
 pall_sel_recomb<-sel_reomb_list%>%map(add_pall)%>%unlist_then_get_mean_pall_per_sim
 pall_sel_s0.05<-sel_s0.05_list%>%map(add_pall)%>%unlist_then_get_mean_pall_per_sim
 
 top1_neutral<-neutral_list%>%map(add_pall)%>%get_top1_pall()
-#top1_recomb<-recomb_list%>%map(add_pall)%>%get_top1_pall()
-#top1_sel<-sel_list%>%map(add_pall)%>%get_top1_pall()
 top1_sel_recomb<-sel_reomb_list%>%map(add_pall)%>%get_top1_pall()
 top1_sel_s0.05<-sel_s0.05_list%>%map(add_pall)%>%get_top1_pall()
 
 pall_neutral<-join(pall_neutral,top1_neutral)%>%mutate(diff=Top_1-Mean_pall)
-#pall_recomb<-join(pall_recomb,top1_recomb)%>%mutate(diff=Top_1-Mean_pall)
-#pall_sel<-join(pall_sel,top1_sel)%>%mutate(diff=Top_1-Mean_pall)
 pall_sel_recomb<-join(pall_sel_recomb,top1_sel_recomb)%>%mutate(diff=Top_1-Mean_pall)
 pall_sel_s0.05<-join(pall_sel_s0.05,top1_sel_s0.05)%>%mutate(diff=Top_1-Mean_pall)
 
 pall_neutral$Model<-"Neutral"
-#pall_recomb$Model<-"Varied\nRecomb"
-#pall_sel$Model<-"Selection"
-pall_sel_recomb$Model<-"Varied\nrecomb\n+ selection"
-pall_sel_s0.05$Model<-"Varied\nrecomb\n+Stronger\nselection"
+pall_sel_recomb$Model<-"Varied\nrecombination\n+ selection"
+pall_sel_s0.05$Model<-"Varied\nrecombination\n+stronger\nselection"
 
 pall_neutral$Pop_History<-"Rum"
-#pall_recomb$Pop_History<-"Rum"
-#pall_sel$Pop_History<-"Rum"
 pall_sel_recomb$Pop_History<-"Rum"
 pall_sel_s0.05$Pop_History<-"Rum"
 
 ### bottleneck simulations
 pall_bottleneck<-bottleneck%>%map(add_pall)%>%unlist_then_get_mean_pall_per_sim
-#pall_bottleneck_sel<-bottleneck_sel%>%map(add_pall)%>%unlist_then_get_mean_pall_per_sim
-#pall_bottleneck_recomb<-bottleneck_recomb%>%map(add_pall)%>%unlist_then_get_mean_pall_per_sim
 pall_bottleneck_s_r<-bottleneck_s_r%>%map(add_pall)%>%unlist_then_get_mean_pall_per_sim
 pall_bottleneck_s0.05_r<-bottleneck_s0.05_r%>%map(add_pall)%>%unlist_then_get_mean_pall_per_sim
 
 Btl_top1_neutral<-bottleneck%>%map(add_pall)%>%get_top1_pall()
-#Btl_top1_sel<-bottleneck_sel%>%map(add_pall)%>%get_top1_pall()
-#Btl_top1_recomb<-bottleneck_recomb%>%map(add_pall)%>%get_top1_pall()
 Btl_top1_sel_recomb<-bottleneck_s_r%>%map(add_pall)%>%get_top1_pall()
 Btl_top1_sel_s0.05<-bottleneck_s0.05_r%>%map(add_pall)%>%get_top1_pall()
 
 pall_bottleneck<-join(pall_bottleneck,Btl_top1_neutral)%>%mutate(diff=Top_1-Mean_pall)
-#pall_bottleneck_sel<-join(pall_bottleneck_sel,Btl_top1_sel)%>%mutate(diff=Top_1-Mean_pall)
-#pall_bottleneck_recomb<-join(pall_bottleneck_recomb,Btl_top1_recomb)%>%mutate(diff=Top_1-Mean_pall)
 pall_bottleneck_s_r<-join(pall_bottleneck_s_r,Btl_top1_sel_recomb)%>%mutate(diff=Top_1-Mean_pall)
 pall_bottleneck_s0.05_r<-join(pall_bottleneck_s0.05_r,Btl_top1_sel_s0.05)%>%mutate(diff=Top_1-Mean_pall)
 
 
 pall_bottleneck$Model<-"Neutral"
-#pall_bottleneck_sel$Model<-"Selection"
-#pall_bottleneck_recomb$Model<-"Varied\nRecomb"
-pall_bottleneck_s_r$Model<-"Varied\nrecomb\n+ selection"
-pall_bottleneck_s0.05_r$Model<-"Varied\nrecomb\n+Stronger\nselection"
+pall_bottleneck_s_r$Model<-"Varied\nrecombination\n+ selection"
+pall_bottleneck_s0.05_r$Model<-"Varied\nrecombination\n+stronger\nselection"
 
 pall_bottleneck$Pop_History<-"Severe bottleneck"
-#pall_bottleneck_sel$Pop_History<-"Severe bottleneck"
-#pall_bottleneck_recomb$Pop_History<-"Severe bottleneck"
 pall_bottleneck_s_r$Pop_History<-"Severe bottleneck"
 pall_bottleneck_s0.05_r$Pop_History<-"Severe bottleneck"
 
 ##### no bottleneck simulations
 pall_nobtl<-Nobottleneck%>%map(add_pall_2000)%>%unlist_then_get_mean_pall_per_sim
-#pall_nobtl_sel<-NObottleneck_sel%>%map(add_pall_2000)%>%unlist_then_get_mean_pall_per_sim
-#pall_nobtl_recomb<-NObottleneck_recomb%>%map(add_pall_2000)%>%unlist_then_get_mean_pall_per_sim
 pall_nobtl_s_r<-NObottleneck_s_r%>%map(add_pall_2000)%>%unlist_then_get_mean_pall_per_sim
 pall_nobtl_s0.05_r<-NObottleneck_s0.05_r%>%map(add_pall_2000)%>%unlist_then_get_mean_pall_per_sim
 
 NOBtl_top1_neutral<-Nobottleneck%>%map(add_pall_2000)%>%get_top1_pall()
-#NOBtl_top1_sel<-NObottleneck_sel%>%map(add_pall_2000)%>%get_top1_pall()
-#NOBtl_top1_recomb<-NObottleneck_recomb%>%map(add_pall_2000)%>%get_top1_pall()
 NOBtl_top1_sel_recomb<-NObottleneck_s_r%>%map(add_pall_2000)%>%get_top1_pall()
 NOBtl_top1_sel_s0.05<-NObottleneck_s0.05_r%>%map(add_pall_2000)%>%get_top1_pall()
 
 pall_nobtl<-join(pall_nobtl,NOBtl_top1_neutral)%>%mutate(diff=Top_1-Mean_pall)
-#pall_nobtl_sel<-join(pall_nobtl_sel,NOBtl_top1_sel)%>%mutate(diff=Top_1-Mean_pall)
-#pall_nobtl_recomb<-join(pall_nobtl_recomb,NOBtl_top1_recomb)%>%mutate(diff=Top_1-Mean_pall)
 pall_nobtl_s_r<-join(pall_nobtl_s_r,NOBtl_top1_sel_recomb)%>%mutate(diff=Top_1-Mean_pall)
 pall_nobtl_s0.05_r<-join(pall_nobtl_s0.05_r,NOBtl_top1_sel_s0.05)%>%mutate(diff=Top_1-Mean_pall)
 
 pall_nobtl$Model<-"Neutral"
-#pall_nobtl_sel$Model<-"Selection"
-#pall_nobtl_recomb$Model<-"Varied\nRecomb"
-pall_nobtl_s_r$Model<-"Varied\nrecomb\n+ selection"
-pall_nobtl_s0.05_r$Model<-"Varied\nrecomb\n+Stronger\nselection"
+pall_nobtl_s_r$Model<-"Varied\nrecombination\n+ selection"
+pall_nobtl_s0.05_r$Model<-"Varied\nrecombination\n+stronger\nselection"
 
 pall_nobtl$Pop_History<-"No bottleneck"
-#pall_nobtl_sel$Pop_History<-"No bottleneck"
-#pall_nobtl_recomb$Pop_History<-"No bottleneck"
 pall_nobtl_s_r$Pop_History<-"No bottleneck"
 pall_nobtl_s0.05_r$Pop_History<-"No bottleneck"
 
@@ -271,21 +204,21 @@ annotation_custom2 <- function (grob, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax
                                           ymin = ymin, ymax = ymax))
 }
 
-mean_ann_text <- data.frame(Model = "Varied\nrecomb\n+ selection",Mean_pall = 0.0755,lab = "Rum actual value",
+mean_ann_text <- data.frame(Model = "Varied\nrecombination\n+ selection",Mean_pall = 0.0755,lab = "Rum actual value",
                        Pop_History = factor("No bottleneck",levels = c("Rum","Severe bottleneck","No bottleneck")))
 
-mean_ann_text_kint <- data.frame(Model = "Varied\nrecomb\n+ selection",Mean_pall = 0.0458,lab = "Kintyre actual value",
+mean_ann_text_kint <- data.frame(Model = "Varied\nrecombination\n+ selection",Mean_pall = 0.0458,lab = "Kintyre actual value",
                             Pop_History = factor("No bottleneck",levels = c("Rum","Severe bottleneck","No bottleneck")))
 
 Mean_plot<-plot_pall%>%
-  mutate(Model = fct_relevel(Model, "Neutral","Varied\nrecomb\n+ selection","Varied\nrecomb\n+Stronger\nselection"))%>%
+  mutate(Model = fct_relevel(Model, "Neutral","Varied\nrecombination\n+ selection","Varied\nrecombination\n+stronger\nselection"))%>%
   mutate(Pop_History = fct_relevel(Pop_History,"Severe bottleneck","Rum","No bottleneck"))%>%
   ggplot(aes(x=Model, y=Mean_pall, fill=Model))+
   geom_violin(position="dodge", alpha=0.5)+
   theme_bw()+
   scale_fill_manual(values = wes_palette("Darjeeling1", n=5))+
   xlab("Simulation Model")+
-  ylab("Mean proportion of individuals with ROH at a SNP\n per simulation")+
+  ylab("Mean ROH density per simulation")+
   labs(tag = "A")+
   theme(
     axis.title.x = element_blank(),
@@ -303,13 +236,13 @@ Mean_plot<-plot_pall%>%
   geom_text(data = mean_ann_text_kint,label = "Kintyre actual value")
   annotation_custom2(grob=ggplotGrob(inset_mean), 
                      data = data.frame(Model="No bottleneck", Mean_pall=0.2),
-                     ymin = 0.2, ymax=0.4, xmin="Varied\nRecomb", xmax="Varied\nrecomb\n+Stronger\nselection")
+                     ymin = 0.2, ymax=0.4, xmin="Varied\nRecomb", xmax="Varied\nrecomb\n+stronger\nselection")
 
 
-
-inset_mean<-no_bottle%>%
-  mutate(Model = fct_relevel(Model, "Neutral","Varied\nrecomb\n+ selection","Varied\nrecomb\n+Stronger\nselection"))%>%
-  ggplot(aes(x=Model, y=Top_1, fill=Model))+
+## inset plot 
+no_bottle%>%
+  mutate(Model = fct_relevel(Model, "Neutral","Varied\nrecombination\n+ selection","Varied\nrecombination\n+stronger\nselection"))%>%
+  ggplot(aes(x=Model, y=Mean_pall, fill=Model))+
   geom_violin(position="dodge", alpha=0.5)+
   theme_classic()+
   scale_fill_manual(values = wes_palette("Darjeeling1", n=5))+
@@ -328,15 +261,15 @@ inset_mean<-no_bottle%>%
 
 ###################################################################################################################################
 
-top_ann_text <- data.frame(Model = "Varied\nrecomb\n+ selection",Top_1 = 0.17,lab = "Rum actual value",
+top_ann_text <- data.frame(Model = "Varied\nrecombination\n+ selection",Top_1 = 0.17,lab = "Rum actual value",
                             Pop_History = factor("No bottleneck",levels = c("Rum","Severe bottleneck","No bottleneck")))
 
-top_ann_text_kint <- data.frame(Model = "Varied\nrecomb\n+ selection",Top_1 = 0.105,lab = "Kintyre actual value",
+top_ann_text_kint <- data.frame(Model = "Varied\nrecombination\n+ selection",Top_1 = 0.105,lab = "Kintyre actual value",
                                  Pop_History = factor("No bottleneck",levels = c("Rum","Severe bottleneck","No bottleneck")))
 
 ## plotting top 1%
 Top_1<-plot_pall%>%
-  mutate(Model = fct_relevel(Model, "Neutral","Varied\nrecomb\n+ selection","Varied\nrecomb\n+Stronger\nselection"))%>%
+  mutate(Model = fct_relevel(Model, "Neutral","Varied\nrecombination\n+ selection","Varied\nrecombination\n+stronger\nselection"))%>%
   mutate(Pop_History = fct_relevel(Pop_History,"Severe bottleneck","Rum","No bottleneck"))%>%
   ggplot(aes(x=Model, y=Top_1, fill=Model))+
   geom_violin(position="dodge", alpha=0.5)+
@@ -360,11 +293,30 @@ Top_1<-plot_pall%>%
   geom_text(data = top_ann_text,label = "Rum actual value")+
   geom_text(data = top_ann_text_kint,label = "Kintyre actual value")
 
+no_bottle%>%
+  mutate(Model = fct_relevel(Model, "Neutral","Varied\nrecombination\n+ selection","Varied\nrecombination\n+stronger\nselection"))%>%
+  ggplot(aes(x=Model, y=Top_1, fill=Model))+
+  geom_violin(position="dodge", alpha=0.5)+
+  theme_classic()+
+  scale_fill_manual(values = wes_palette("Darjeeling1", n=5))+
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(), 
+    axis.text.x = element_blank(), 
+    axis.text = element_text(size=20)
+    
+  )+
+  theme(legend.position = "none")+
+  stat_summary(fun=mean, geom="point",size=2)
 
 
 Mean_plot/Top_1
 
+####################################################################################################
 
+#####################################################################################################
+
+#####################################################################################################
 ### plotting bottom 1%
 
 plot_pall%>%
