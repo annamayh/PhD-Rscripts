@@ -4,7 +4,7 @@ library(ggplot2)
 library(patchwork)
 library(ggpubr)
 
-setwd("H:/PHD_2ndYR/Recombination ROH")
+setwd("H:/PHD_2ndYR/Recombination ROH/Data_files")
 CMpall_main <- read.table("KINTYRE_Pall_CM_filt_moreSNPs.txt", header = TRUE)
 CMpall<-read.table("Pall_CM_filt_moreSNPs.txt", header = TRUE)
 
@@ -21,7 +21,7 @@ main_sub$order<-1:nrow(main_sub)
 mainland_CM<-ggplot(main_sub, aes(order, pall)) +
   geom_point() +
   theme_classic()+
-  labs(x = "SNP order", y = "P") +
+  labs(x = "SNP order", y = "ROH density") +
   geom_hline(yintercept = 0.03199692,  color = "red") +
   geom_hline(yintercept = 0, linetype = "dashed", colour = "red") +
   geom_hline(yintercept = 0.08280255, linetype="dashed",colour = "red")+
@@ -33,7 +33,7 @@ rum_sub$order<-1:nrow(rum_sub)
 rum_CM <- ggplot(rum_sub, aes(order, pall)) +
   geom_point() +
   theme_classic()+
-  labs(x = "SNP order", y = "P") +
+  labs(x = "SNP order", y = "ROH denisty") +
   geom_hline(yintercept = 0.1471829, linetype="dashed", color = "red") +
   geom_hline(yintercept = 0, linetype = "dashed", colour = "red") +
   geom_hline(yintercept = 0.06085681, colour = "red")+
@@ -56,7 +56,7 @@ main_sub_BP <- subset(BP_pall_main, CHR == "18")
 mainland_BP<-ggplot(main_sub_BP, aes(BP, pall)) +
   geom_point() +
   theme_classic()+
-  labs(x = "SNP order", y = "P") +
+  labs(x = "SNP order", y = "ROH denisty") +
   geom_hline(yintercept = 0.02929397,  color = "red") +
   geom_hline(yintercept = 0, linetype = "dashed", colour = "red") +
   geom_hline(yintercept = 0.0955414, linetype="dashed",colour = "red") +
@@ -67,12 +67,14 @@ rum_sub_BP <- subset(BP_palls, CHR == "18")
 rum_BP <- ggplot(rum_sub_BP, aes(BP, pall)) +
   geom_point() +
   theme_classic()+
-  labs(x = "SNP order", y = "P") +
+  labs(x = "SNP order", y = "ROH denisty") +
   geom_hline(yintercept = 0.1436224, linetype="dashed", color = "red") +
   geom_hline(yintercept = 0, linetype = "dashed", colour = "red") +
   geom_hline(yintercept = 0.05770727, colour = "red")+
   theme(axis.text.x=element_blank(),
-        axis.ticks.x=element_blank())
+        axis.ticks.x=element_blank())+
+  annotate("rect", xmin = 3, xmax = 4.2, ymin = 12, ymax = 21,
+           alpha = .2)
   
 
 

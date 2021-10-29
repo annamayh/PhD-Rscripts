@@ -28,14 +28,13 @@ CM_g<-ggplot(CMpall, aes(Order, pall, col = as.factor(CHR%% 2))) +
   scale_colour_manual(values = c("coral", "cornflowerblue")) +
   geom_point() +
   theme_classic()+
-  labs(tag = "Rum", x="Linkage group (Size ordered)",y="Proportion of population with \nROH at SNP", title="Using genetic (cM) map")+
+  labs(tag = "Rum", x="Linkage group (Size ordered)",y="ROH density", title="Using genetic (cM) map")+
   theme(legend.position = "none",
         axis.title.x = element_blank(),
         plot.title = element_text(hjust = 0.5),
         axis.text.x = element_text(size = 8, vjust = 0.5),
         axis.text.y = element_text(size = 12, vjust = 0.5)) +
   geom_hline(yintercept = 0.1486795, linetype="dashed", color = "red") +
-  geom_hline(yintercept = 0, linetype = "dashed", colour = "red") +
   geom_hline(yintercept = 0.06409285, colour = "red")+
   scale_x_continuous(limits = c(0,25798), expand = c(0, 0), label = axis.set$CHR, breaks = axis.set$center)
 
@@ -64,13 +63,12 @@ BP_g<-ggplot(BPpall, aes(Order, pall, col = as.factor(CHR%% 2))) +
   scale_colour_manual(values = c("coral", "cornflowerblue")) +
   geom_point() +
   theme_classic()+
-  labs(x="Linkage group (Size ordered)", y="Proportion of population with \nROH at SNP", title = "Using physical (BP) map")+
+  labs(x="Linkage group (Size ordered)", y="ROH density", title = "Using physical (BP) map")+
   theme(legend.position = "none",
         plot.title = element_text(hjust = 0.5),
         axis.text.x = element_text(size = 8, vjust = 0.5),
         axis.text.y = element_text(size = 12, vjust = 0.5)) +
   geom_hline(yintercept = 0.146667754, linetype="dashed", color = "red") +
-  geom_hline(yintercept = 0, linetype = "dashed", colour = "red") +
   geom_hline(yintercept = 0.06237447, colour = "red")+
   scale_x_continuous(limits = c(0,26318), expand = c(0, 0), label = axis.set_BP$CHR, breaks = axis.set_BP$center)
 

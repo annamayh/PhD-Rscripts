@@ -29,14 +29,13 @@ CM_plot_kint<-ggplot(CM_kint, aes(Order, pall, col = as.factor(CHR%% 2))) +
   scale_colour_manual(values = c("coral", "cornflowerblue")) +
   geom_point() +
   theme_classic()+
-  labs(tag = "Kintyre", y="Proportion of population with \nROH at SNP", title="Using genetic (cM) map")+
+  labs(tag = "Kintyre", y="ROH density", title="Using genetic (cM) map")+
   theme(legend.position = "none",
         axis.title.x = element_blank(),
         plot.title = element_text(hjust = 0.5),
         axis.text.x = element_text(size = 8, vjust = 0.5),
         axis.text.y = element_text(size = 12, vjust = 0.5)) +
   geom_hline(yintercept = 0.083, linetype="dashed", color = "red") +
-  geom_hline(yintercept = 0, linetype = "dashed", colour = "red") +
   geom_hline(yintercept = 0.034, colour = "red")+
   scale_x_continuous(limits = c(0,25200), expand = c(0, 0), label = axis.set$CHR, breaks = axis.set$center)
 
@@ -65,13 +64,12 @@ BP_plot_kint<-ggplot(BP_kint, aes(Order, pall, col = as.factor(CHR%% 2))) +
   scale_colour_manual(values = c("coral", "cornflowerblue")) +
   geom_point() +
   theme_classic()+
-  labs(x="Linkage group (Size ordered)", y="Proportion of population with \nROH at SNP", title = "Using physical (bp) map")+
+  labs(x="Linkage group (Size ordered)", y="ROH density", title = "Using physical (bp) map")+
   theme(legend.position = "none",
         axis.text.x = element_text(size = 8, vjust = 0.5),
         axis.text.y = element_text(size = 12, vjust = 0.5),
         plot.title = element_text(hjust = 0.5)) +
   geom_hline(yintercept = 0.0955, linetype="dashed", color = "red") +
-  geom_hline(yintercept = 0, linetype = "dashed", colour = "red") +
   geom_hline(yintercept = 0.032, colour = "red")+
   scale_x_continuous(limits = c(0,25700), expand = c(0, 0), label = axis.set_BP$CHR, breaks = axis.set_BP$center)
 
