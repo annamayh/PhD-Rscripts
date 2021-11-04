@@ -4,6 +4,7 @@ library(plyr)
 library(asreml)
 library(tidyr)
 library(reshape2)
+library("purrr")
 
 qgm_summary <-function(asr){
   print("CONVERGENCE")
@@ -35,6 +36,8 @@ mum_stat<-sqlFetch(con, "sys_HindStatusAtConception") %>% select(-CalfBirthYear)
 ped<-sqlFetch(con, "sys_Pedigree")%>%select(Code, MumCode, Sire)
 odbcClose(con) #close connection
 
+ped[is.na(ped)] <- 0
+ainv <- ainverse(ped)
 
 ################################################
 ### read in ROH file to work out FROH per chr ###
@@ -91,7 +94,7 @@ for (k in 1:33){
     
   for_models[[k]]<-mutate(for_models[[k]],froh_minus_focal_div=froh_minus_focal/32 )#Divide by total number of chr in rest of FROH 
   for_models[[k]]<-dplyr::select(for_models[[k]], Code, froh_minus_focal_div, paste0("FROH_chr", k))#just keeping inportant columns 
-
+  names(for_models[[k]])[names(for_models[[k]])== paste0("FROH_chr", k)]<-"Focal_FROH"
   }
 
 
@@ -103,14 +106,9 @@ for (k in 1:33){
 ######## NOW  SET THINGS UP TO RUN MODEL #####################################################
 #############################################################################################
 
+Run_model_all_LG<- function(LG){
 
-Birth_wt_df<-birth_wt %>%join(life)%>%join(mum_stat)%>%join(df_14)%>%na.omit()
-
-
-#ped_check<-join(ped, FROH, by="Code", type="right") ## or could do whole pedigree
-#ainv <- ainverse(ped)
-#what to do about missing data??
-
+Birth_wt_df<-birth_wt%>%join(life)%>%join(mum_stat)%>%join(LG)%>%na.omit()
 
 Birth_wt_df$Sex <- factor(Birth_wt_df$Sex)
 Birth_wt_df$Code <- factor(Birth_wt_df$Code)
@@ -118,9 +116,76 @@ Birth_wt_df$MotherStatus <- factor(Birth_wt_df$MotherStatus)
 Birth_wt_df$MumCode <- factor(Birth_wt_df$MumCode)
 
 
-chr_model <- asreml(fixed= CaptureWt ~ 1 + Sex + AgeHrs + froh_minus_focal_div + FROH_chr1 + MotherStatus, 
-                    random= ~ BirthYear +MumCode, 
+chr_model_with_ped <- asreml(fixed= CaptureWt ~ 1 + Sex + AgeHrs + froh_minus_focal_div + Focal_FROH + MotherStatus, 
+                    random= ~ vm(Code,ainv)+BirthYear +MumCode, 
+                    residual= ~ idv(units),
                     data=Birth_wt_df)
-## add in pedigree
 
-qgm_summary(chr_model)
+
+
+}
+
+
+
+
+for (s in 1:33) {
+  
+  LG<-for_models[[s]]
+
+  Birth_wt_df<-birth_wt%>%join(life)%>%join(mum_stat)%>%join(LG)%>%na.omit()
+
+  Birth_wt_df$Sex <- factor(Birth_wt_df$Sex)
+  Birth_wt_df$Code <- factor(Birth_wt_df$Code)
+  Birth_wt_df$MotherStatus <- factor(Birth_wt_df$MotherStatus)
+  Birth_wt_df$MumCode <- factor(Birth_wt_df$MumCode)
+
+
+  chr_model_with_ped <- asreml(fixed= CaptureWt ~ 1 + Sex + AgeHrs + froh_minus_focal_div + Focal_FROH + MotherStatus, 
+                             random= ~ vm(Code,ainv)+BirthYear +MumCode, 
+                             residual= ~ idv(units),
+                             data=Birth_wt_df)
+
+  print(paste0("QGM SUMMARY FOR LG", s))
+  qgm_summary(chr_model_with_ped)
+
+}
+## this works if i then run each line of the function through??
+#LG<-for_models[[1]]
+#qgm_summary(chr_model_with_ped)
+
+## but then this doesnt??????
+#test<-Run_model_all_LG(LG)
+#qgm_summary(test)
+
+#f=1
+
+#for (f in 1:2){
+ # LG_list<-for_models[[f]]
+  #output_model<-Run_model_all_LG(LG_list)
+  #print(paste0("QGM SUMMARY FOR LG", f))
+  #qgm_summary(output_model)
+  
+#}
+
+#model_output<-map(for_models,Run_model_all_LG)
+
+
+#j=1
+
+#for (j in 1:2){
+
+  #model_out<-Run_model_all_LG(for_models[j])
+  #print(paste0("QGM SUMMARY FOR LG", j))
+  #qgm_summary(model_out)
+
+#}
+
+## maybe do no ped too?? 
+
+#chr_model_NO_ped <- asreml(fixed= CaptureWt ~ 1 + Sex + AgeHrs + froh_minus_focal_div + Focal_LG_FROH + MotherStatus, 
+ #                          random= ~ BirthYear +MumCode, 
+  #                         residual= ~ idv(units),
+   #                        data=Birth_wt_df)
+
+
+#qgm_summary(chr_model_NO_ped)
