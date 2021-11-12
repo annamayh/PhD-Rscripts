@@ -134,7 +134,7 @@ focal_LG_solution
 effect_sizes<-as.data.frame(map(all_LG_models, get_sol_focal_LG)%>% #getting the effect size for each LG and making table
   unlist())%>%
   tibble::rownames_to_column()%>%
-  setNames(c("CHR","effect_size_of_LG"))
+  setNames(c("CHR","effect_size"))
 
 
 size_v_length<-join(effect_sizes,deersum)%>%select(-"Max_EstMb")
@@ -147,4 +147,41 @@ ggplot(size_v_length, aes(x=chr_length_KB,y=effect_size_of_LG))+
   geom_smooth(method=lm)
   
 
+### pulling out standard deviations ####
 
+get_SE_focal_LG<-function(model_output){
+  
+  fixed_eff_table<-as.data.frame(summary(model_output,coef=TRUE)$coef.fixed)
+  focal_LG_solution<-fixed_eff_table[6,"std error"] # effect size is the 6th row down in the solutions column 
+  focal_LG_solution
+}
+
+SE<-as.data.frame(map(all_LG_models, get_SE_focal_LG)%>% 
+                    unlist())%>%
+                    tibble::rownames_to_column()%>%
+                    setNames(c("CHR","SE"))
+
+
+############################################
+#### forest plot of effect sizes and CI ###
+###########################################
+effect_SE<-effect_sizes%>%join(SE)%>% join(deersum)%>%
+  mutate(upper_CI=effect_size+(2*SE))%>%mutate(lower_CI=effect_size-(2*SE))#%>%order(effect_SE$chr_length_KB)
+
+effect_SE$overlap_zero<-ifelse(effect_SE$CHR %in% c("23", "24", "14"),"Yes","No")
+
+
+effect_SE$CHR<-as.factor(effect_SE$CHR)
+effect_SE$CHR<-ordered(effect_SE$CHR, levels = c("5", "18", "20", "9","11","12","19","15",
+                                           "30","21","23","1","14","33","25","13","17","29","28", "4",
+                                           "27","22", "24","8","3","31","6","7","2","16","32","10","26"))
+
+
+ggplot(data=effect_SE, aes(x=CHR, y=effect_size, ymin=lower_CI, ymax=upper_CI,color=overlap_zero)) +
+  geom_pointrange() + #plots lines based on Y and lower and upper CI
+  geom_hline(yintercept=0, lty=2) +  # add a dotted line at x=1 after flip
+  coord_flip() +  # flip coordinates (puts labels on y axis)
+  labs(x="Linkage group", y="Effect size on birth weight (95% CI)", title = "Effect size of Linkage group FROH on Birthweight (kg)") +
+  theme_bw()+  # use a white background                 
+  theme(legend.position = "none")+
+  scale_color_manual(values=c("grey50","red"),guide=FALSE)
