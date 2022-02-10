@@ -4,14 +4,21 @@ library(ggplot2)
 library(patchwork)
 library(ggpubr)
 
-setwd("H:/PHD_2ndYR/Recombination ROH/Data_files")
+setwd("M:/PHD_2ndYR/Recombination_ROH/Data_files")
 CMpall_main <- read.table("KINTYRE_Pall_CM_filt_moreSNPs.txt", header = TRUE)
 CMpall<-read.table("Pall_CM_filt_moreSNPs.txt", header = TRUE)
 
+mean(CMpall_main$pall) 
+quantile(CMpall_main$pall, c(.01, .99)) ## 
+length(which(CMpall_main$pall > 0.08280255)) ##
+hotspots_kint_gen<-subset(CMpall_main, pall>0.08280255)%>%mutate(pall_cm_kint=pall)%>%select(CHR,pall_cm_kint,SNP)
+
+
 mean(CMpall$pall) 
 quantile(CMpall$pall, c(.01, .99)) ## 
-length(which(CMpall_main$pall > 0.08280255)) ##
-length(which(CMpall_main$pall <= 0)) ## 
+length(which(CMpall$pall > 0.1486795 )) ##
+hotspots_rum_gen<-subset(CMpall, pall>0.1486795)%>%mutate(pall_cm_rum=pall)%>%select(CHR,pall_cm_rum,SNP)
+
 
 
 #### CM maps ####
@@ -44,22 +51,29 @@ rum_CM <- ggplot(rum_sub, aes(order, pall)) +
 #############################################
 ##### BP maps###########################
 
-BP_pall_main <- read.table("Kintyre_Pall_BP_filt.txt", header = TRUE)
-BP_palls<-read.table("Rum_Pall_BP_filt.txt", header = TRUE)
 
+BP_pall_main <- read.table("Kintyre_BP_UpdatedMbSANGER_filtSNPS.txt", header = TRUE)
+BP_palls<-read.table("Rum_Pall_BP_filt_UPDATED_SANGER_POS.txt", header = TRUE)
+
+mean(BP_pall_main$pall) 
+quantile(BP_pall_main$pall, c(.01, .99)) ## 
+length(which(BP_pall_main$pall > 0.08917197  )) ##
+hotspots_kint<-subset(BP_pall_main, pall>0.08917197)%>%mutate(pall_bp_kint=pall)%>%select(CHR,pall_bp_kint,SNP)
 
 mean(BP_palls$pall) 
 quantile(BP_palls$pall, c(.01, .99)) ## 
-
+length(which(BP_palls$pall > 0.159197913  )) ##
+length(which(BP_palls$pall <= 0)) ##  
+hotspots_rum<-subset(BP_palls, pall>0.159197913)%>%mutate(pall_bp_rum=pall)%>%select(CHR,pall_bp_rum,SNP)
+unique(hotspots_rum[c("CHR")])
 
 main_sub_BP <- subset(BP_pall_main, CHR == "18")
 mainland_BP<-ggplot(main_sub_BP, aes(BP, pall)) +
   geom_point() +
   theme_classic()+
   labs(x = "SNP order", y = "ROH denisty") +
-  geom_hline(yintercept = 0.02929397,  color = "red") +
-  geom_hline(yintercept = 0, linetype = "dashed", colour = "red") +
-  geom_hline(yintercept = 0.0955414, linetype="dashed",colour = "red") +
+  geom_hline(yintercept = 0.0386007, linetype = "dashed", colour = "red") +
+  geom_hline(yintercept = 0.08917197, linetype="dashed",colour = "red") +
   theme(axis.text.x=element_blank(),
         axis.ticks.x=element_blank())
 
@@ -68,13 +82,12 @@ rum_BP <- ggplot(rum_sub_BP, aes(BP, pall)) +
   geom_point() +
   theme_classic()+
   labs(x = "SNP order", y = "ROH denisty") +
-  geom_hline(yintercept = 0.1436224, linetype="dashed", color = "red") +
-  geom_hline(yintercept = 0, linetype = "dashed", colour = "red") +
-  geom_hline(yintercept = 0.05770727, colour = "red")+
+  geom_hline(yintercept = 0.159197913, linetype="dashed", color = "red") +
+  geom_hline(yintercept = 0.07320247, colour = "red")+
   theme(axis.text.x=element_blank(),
-        axis.ticks.x=element_blank())+
-  annotate("rect", xmin = 3, xmax = 4.2, ymin = 12, ymax = 21,
-           alpha = .2)
+        axis.ticks.x=element_blank())
+  #annotate("rect", xmin = 3, xmax = 4.2, ymin = 12, ymax = 21,
+   #        alpha = .2)
   
 
 
@@ -104,4 +117,7 @@ wrap_plots(plotlist, guides = 'collect', design = layoutplot, title(main="Q"))
 
 
 
-
+rum<-join(hotspots_rum, hotspots_rum_gen)%>%na.omit()
+kint<-join(hotspots_kint,hotspots_kint_gen)%>%na.omit()
+cm<-join(hotspots_kint_gen,hotspots_rum_gen)%>%na.omit()
+bp<-join(hotspots_kint,hotspots_rum)%>%na.omit()
