@@ -92,38 +92,6 @@ for (i in 1:length(NObottleneck_s0.05_r)){
 }
 ###########################################################################################
 
-#mean of means 
-
-
-get_means_sims<-function(listed_sims){
-  bind_rows(listed_sims, .id = "simulation_num")%>%
-    select(simulation_num, NSEG,KB)%>%
-    group_by(simulation_num)%>% #grouping by simulation iteration
-    dplyr::summarise(Mean_num_ROH=mean(NSEG), Total_pop_ROH_num=sum(NSEG), Ave_KB_in_ROH=mean(KB))#
-}
-
-
-
-Rum_neutral_ROH<-neutral_list%>%get_means_sims()
-Rum_recomb<-recomb%>%get_means_sims()
-Rum_sel<-sel_reomb_list%>%get_means_sims()
-Rum_strongsel<-sel_s0.05_list%>%get_means_sims()
-
-btl_neutral<-bottleneck%>%get_means_sims()
-btl_recomb<-bottleneck_r%>%get_means_sims()
-btl_sel<-bottleneck_s_r%>%get_means_sims()
-btl_strongsel<-bottleneck_s0.05_r%>%get_means_sims()
-
-NObtl_neutral<-Nobottleneck%>%get_means_sims()
-NObtl_recomb<-NObottleneck_r%>%get_means_sims()
-NObtl_sel<-NObottleneck_s_r%>%get_means_sims()
-NObtl_strongsel<-NObottleneck_s0.05_r%>%get_means_sims()
-
-
-mean(Rum_neutral_ROH$Mean_num_ROH)
-
-
-
 ## overall mean
 
 unlist_f<-function(listed_sims){
@@ -148,4 +116,17 @@ unNObtl_sel<-NObottleneck_s_r%>%unlist_f()
 unNObtl_strongsel<-NObottleneck_s0.05_r%>%unlist_f()
 
 
-mean(unRum_neutral_ROH$NSEG)
+mean(unRum_neutral_ROH$KB)
+mean(unRum_recomb$KB)
+mean(unRum_sel$KB)
+mean(unRum_strongsel$KB)
+
+mean(unbtl_neutral$KB)
+mean(unbtl_recomb$KB)
+mean(unbtl_sel$KB)
+mean(unbtl_strongsel$KB)
+  
+mean(unNObtl_neutral$KB)
+mean(unNObtl_recomb$KB)
+mean(unNObtl_sel$KB)
+mean(unNObtl_strongsel$KB)
