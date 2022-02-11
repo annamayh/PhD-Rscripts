@@ -181,7 +181,7 @@ ggplot(data=effect_SE, aes(x=CHR, y=effect_size, ymin=lower_CI, ymax=upper_CI,co
   geom_pointrange() + #plots lines based on Y and lower and upper CI
   geom_hline(yintercept=0, lty=2) +  # add a dotted line at x=1 after flip
   coord_flip() +  # flip coordinates (puts labels on y axis)
-  labs(x="Linkage group", y="Effect size on birth weight (95% CI)", title = "Effect size of Linkage group FROH on Birthweight (kg)") +
+  labs(x="Linkage group", y="Effect size on birth weight + CI", title = "Effect size of Linkage group FROH on Birthweight (kg)") +
   theme_bw()+  # use a white background                 
   theme(legend.position = "none")+
   scale_color_manual(values=c("grey50","red"),guide=FALSE)
