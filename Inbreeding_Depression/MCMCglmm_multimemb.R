@@ -93,14 +93,10 @@ summary(model)
 
 plot(model$Sol)
 
-apply(model$Sol,2,quantile,probs = c(.025,0.975))
-#here we plot the simulated tree effect against the random effect coefficients. Looks like it does a good job.
-
-
 names <- apply(model$Sol,2,mean) %>% names ## gets names of all random variables 
-sols<-apply(model$Sol,2,mean)
-CI_upper<-apply(model$Sol,2,quantile,probs = c(0.975))
-CI_lower<-apply(model$Sol,2,quantile,probs = c(0.025))
+sols<-apply(model$Sol,2,mean)#gets mean of all solutions i.e. the effect size of random effects 
+CI_upper<-apply(model$Sol,2,quantile,probs = c(0.975)) #gets upper confidence interval for all solutions 
+CI_lower<-apply(model$Sol,2,quantile,probs = c(0.025)) #gets lower CI for all solutions
 
 Random_table<-tibble(sols,row.names=names)%>%add_column(CI_upper)%>%add_column(CI_lower)
 
