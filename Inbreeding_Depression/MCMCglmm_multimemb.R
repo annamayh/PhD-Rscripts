@@ -6,6 +6,8 @@ library(reshape2)
 library("purrr")
 library("MCMCglmm")
 library("data.table")
+library(tibble)
+library(ggplot2)
 
 ###########################################################################
 ### reading pedigree etc from database ####################################
@@ -26,9 +28,9 @@ ped$Code <- as.factor(ped$Code)
 ped$MumCode <- as.factor(ped$MumCode)
 ped$Sire <- as.factor(ped$Sire)
 
-prep<-prepPed(ped)
+#prep<-prepPed(ped)
 
-ped_matrix <- as.matrix(nadiv::makeA(prep))
+#ped_matrix <- as.matrix(nadiv::makeA(prep))
 
 
 odbcClose(con) #close connection
@@ -57,12 +59,15 @@ deersum <- deermap %>%
 
 
 froh_per_chr<-join(KB_perLG,deersum)%>% mutate(chr_froh=KB_chr/chr_length_KB)%>%
-  select(-Max_EstMb)%>% dcast(Code~CHR)
+  select(-Max_EstMb)%>% reshape2::dcast(Code~CHR) %>% mutate(FROHsum = rowSums(.[2:34]))%>%mutate(FROH_sum_div=FROHsum/33)
 
 
-colnames(froh_per_chr) <- c("Code", paste0("FROH_chr", 1:33))
+colnames(froh_per_chr) <- c("Code", paste0("FROH_chr", 1:33),"FROHsum","FROH_sum_div")
 
-Birth_wt_df<-birth_wt%>%join(life)%>%join(mum_stat)%>%join(froh_per_chr)%>%na.omit()
+FROH_full<-read.table("PhD_3rdYR/Data_files/ROH_output/ROH_search_UpdatedMb_01_2022.hom.indiv", header=T, stringsAsFactors = F)%>%
+  select(IID,KB) %>% dplyr::rename(Code=IID)%>%mutate(FROH=KB/2495700)
+
+Birth_wt_df<-birth_wt%>%join(life)%>%join(mum_stat)%>%join(froh_per_chr)%>%join(FROH_full)%>%na.omit()
 
 #need to set factors for categorical variables#
 Birth_wt_df$Sex <- factor(Birth_wt_df$Sex)
@@ -70,18 +75,31 @@ Birth_wt_df$Code <- factor(Birth_wt_df$Code)
 Birth_wt_df$MotherStatus <- factor(Birth_wt_df$MotherStatus)
 Birth_wt_df$MumCode <- factor(Birth_wt_df$MumCode)
 
-Birth_wt_df_sub<-Birth_wt_df[1:100,]
+#Birth_wt_df_sub<-Birth_wt_df[1:100,]
+#for jarrod
+#save.image(file="Anna_mult_memb.RData")
+
+
+## set priors
+# kirstys priors to see if they help
+k<-10000
+prior<-list(R=list(V=1,nu=0.002),
+            G=list(G1=list(V=1,nu=1,aplha.mu=0,alpha.V=k),
+                   G1=list(V=1,nu=1,aplha.mu=0,alpha.V=k),
+                  G1=list(V=1,nu=1,aplha.mu=0,alpha.V=k)))
 
 #### RUNNING MULTI-MEMBERSHIP MODEL ####
-model<-MCMCglmm(CaptureWt~1 + Sex + AgeHrs + MotherStatus,
+# changing FROH sum to FROH or FROH sum/33 is same really 
+model<-MCMCglmm(CaptureWt~1 + Sex + AgeHrs + MotherStatus + FROH, #need to fit sum chrFROH  as continuous covariate,
                 random=~idv(FROH_chr1+FROH_chr2+FROH_chr3+FROH_chr4+FROH_chr5+FROH_chr6+FROH_chr7+FROH_chr8+
                                    FROH_chr9+FROH_chr10+FROH_chr11+FROH_chr12+FROH_chr13+FROH_chr14+FROH_chr15+FROH_chr16+
                                    FROH_chr17+FROH_chr18+FROH_chr19+FROH_chr20+FROH_chr21+FROH_chr22+FROH_chr23+FROH_chr24+
                                    FROH_chr25+FROH_chr26+FROH_chr27+FROH_chr28+FROH_chr29+FROH_chr30+FROH_chr31+FROH_chr32+
                                    FROH_chr33)+BirthYear +MumCode,
-                data=Birth_wt_df_sub,
-                pr=TRUE,
-                nitt=30000,burnin=10000)
+                data=Birth_wt_df,
+                prior = prior,
+                pr=TRUE,#saves posterior dist for random effects i.e. what we want 
+                nitt=50000,burnin=5000)
 
 
 
@@ -90,8 +108,9 @@ model<-MCMCglmm(CaptureWt~1 + Sex + AgeHrs + MotherStatus,
 #### getting output info ###
 
 summary(model)
+#plot(model$Sol)
 
-plot(model$Sol)
+plot(model)
 
 names <- apply(model$Sol,2,mean) %>% names ## gets names of all random variables 
 sols<-apply(model$Sol,2,mean)#gets mean of all solutions i.e. the effect size of random effects 
@@ -103,6 +122,15 @@ Random_table<-tibble(sols,row.names=names)%>%add_column(CI_upper)%>%add_column(C
 names(Random_table)[1]<-"solution"
 names(Random_table)[2]<-"model_variable"
 
-FROH_sols<-Random_table%>%filter(model_variable %like% "FROH")%>% add_column(CHR = 1:33) ##filtering all random variables for those including FROH
+FROH_sols<-Random_table%>%filter(model_variable %like% "FROH_c")%>% add_column(CHR = 1:33) ##filtering all random variables for those including FROH
 
+FROH_sols$CHR<-as.factor(FROH_sols$CHR)
 
+ggplot(data=FROH_sols, aes(x=CHR, y=solution, ymin=CI_lower, ymax=CI_upper)) +
+  geom_pointrange() + #plots lines based on Y and lower and upper CI
+  geom_hline(yintercept=0, lty=2) +  # add a dotted line at x=1 after flip
+  coord_flip() +  # flip coordinates (puts labels on y axis)
+  labs(x="Linkage group", y="solution + CI", title = "Effect size of Linkage group FROH on Birthweight (kg)") +
+  theme_bw()+  # use a white background                 
+  theme(legend.position = "none")
+  
