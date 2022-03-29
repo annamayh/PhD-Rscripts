@@ -8,29 +8,29 @@ library("MCMCglmm")
 library("data.table")
 library(tibble)
 library(ggplot2)
+library(MasterBayes)
 
 ###########################################################################
 ### reading pedigree etc from database ####################################
 ###########################################################################
-#### when doing on server this will have to read in from the server #######
+
 
 db<-"C:\\Users\\s1881212\\Documents\\Deer_database_08_2021\\RedDeer1.99.accdb" #open connection
 con<-odbcConnectAccess2007(db)
 birth_wt<-sqlFetch(con, "sys_BirthWt") 
 # getting trait 
-life<-sqlFetch(con, "tbllife") %>% select(Code, BirthYear, MumCode, Sex) 
+life<-sqlFetch(con, "tbllife") %>% dplyr::select(Code, BirthYear, MumCode, Sex) 
 # getting table life with birth yr etc
-mum_stat<-sqlFetch(con, "sys_HindStatusAtConception") %>% select(-CalfBirthYear)%>%dplyr::rename(MumCode=Mum, Code=Calf)
+mum_stat<-sqlFetch(con, "sys_HindStatusAtConception") %>% dplyr::select(-CalfBirthYear)%>%dplyr::rename(MumCode=Mum, Code=Calf)
 # also getting the status of the hind when calf born
 #remember need the R-friendly button on!!###
-ped<-sqlFetch(con, "sys_Pedigree")%>%select(Code, MumCode,Sire)
+ped<-sqlFetch(con, "sys_Pedigree")%>%dplyr::select(Code, MumCode,Sire)
 ped$Code <- as.factor(ped$Code)
 ped$MumCode <- as.factor(ped$MumCode)
 ped$Sire <- as.factor(ped$Sire)
 
-#prep<-prepPed(ped)
+## ordering and inverting pedigree
 
-#ped_matrix <- as.matrix(nadiv::makeA(prep))
 
 
 odbcClose(con) #close connection
@@ -42,7 +42,7 @@ setwd("H:/")
 
 ###need to make this with updated map positions
 FROH<-read.table("PhD_3rdYR/Data_files/ROH_output/ROH_search_UpdatedMb_01_2022.hom", header=T, stringsAsFactors = F)%>%
-  select(IID,CHR,KB) %>% dplyr::rename(Code=IID)
+  dplyr::select(IID,CHR,KB) %>% dplyr::rename(Code=IID)
 
 KB_perLG<-FROH%>%dplyr::group_by(Code, CHR)%>%
   dplyr::summarise(KB_chr=sum(KB))%>%
@@ -59,13 +59,13 @@ deersum <- deermap %>%
 
 
 froh_per_chr<-join(KB_perLG,deersum)%>% mutate(chr_froh=KB_chr/chr_length_KB)%>%
-  select(-Max_EstMb)%>% reshape2::dcast(Code~CHR) %>% mutate(FROHsum = rowSums(.[2:34]))%>%mutate(FROH_sum_div=FROHsum/33)
+  dplyr::select(-Max_EstMb)%>% reshape2::dcast(Code~CHR) %>% mutate(FROHsum = rowSums(.[2:34]))%>%mutate(FROH_sum_div=FROHsum/33)
 
 
 colnames(froh_per_chr) <- c("Code", paste0("FROH_chr", 1:33),"FROHsum","FROH_sum_div")
 
 FROH_full<-read.table("PhD_3rdYR/Data_files/ROH_output/ROH_search_UpdatedMb_01_2022.hom.indiv", header=T, stringsAsFactors = F)%>%
-  select(IID,KB) %>% dplyr::rename(Code=IID)%>%mutate(FROH=KB/2495700)
+  dplyr::select(IID,KB) %>% dplyr::rename(Code=IID)%>%mutate(FROH=KB/2495700)
 
 Birth_wt_df<-birth_wt%>%join(life)%>%join(mum_stat)%>%join(froh_per_chr)%>%join(FROH_full)%>%na.omit()
 
@@ -75,9 +75,17 @@ Birth_wt_df$Code <- factor(Birth_wt_df$Code)
 Birth_wt_df$MotherStatus <- factor(Birth_wt_df$MotherStatus)
 Birth_wt_df$MumCode <- factor(Birth_wt_df$MumCode)
 
-#Birth_wt_df_sub<-Birth_wt_df[1:100,]
-#for jarrod
-#save.image(file="Anna_mult_memb.RData")
+### sorting out pedigree
+
+ids_in<-as.matrix(Birth_wt_df%>%dplyr::select(Code))
+
+pruned<-prunePed(ped, ids_in)
+ped_ordered<-orderPed(pruned)
+ped_ordered$Code <- as.factor(ped_ordered$Code)
+ped_ordered$MumCode <- as.factor(ped_ordered$MumCode)
+ped_ordered$Sire <- as.factor(ped_ordered$Sire)
+
+Ainv<-inverseA(ped_ordered, nodes="ALL")$Ainv
 
 
 ## set priors
@@ -86,25 +94,36 @@ k<-10000
 prior<-list(R=list(V=1,nu=0.002),
             G=list(G1=list(V=1,nu=1,aplha.mu=0,alpha.V=k),
                    G1=list(V=1,nu=1,aplha.mu=0,alpha.V=k),
-                  G1=list(V=1,nu=1,aplha.mu=0,alpha.V=k)))
+                   G1=list(V=1,nu=1,aplha.mu=0,alpha.V=k),
+                    G1=list(V=1,nu=1,aplha.mu=0,alpha.V=k)))
 
 #### RUNNING MULTI-MEMBERSHIP MODEL ####
 # changing FROH sum to FROH or FROH sum/33 is same really 
-model<-MCMCglmm(CaptureWt~1 + Sex + AgeHrs + MotherStatus + FROH, #need to fit sum chrFROH  as continuous covariate,
-                random=~idv(FROH_chr1+FROH_chr2+FROH_chr3+FROH_chr4+FROH_chr5+FROH_chr6+FROH_chr7+FROH_chr8+
+model<-MCMCglmm(CaptureWt~1 + Sex + AgeHrs + MotherStatus + FROHsum, #need to fit sum chrFROH  as continuous covariate,
+                random= ~ Code +
+                  idv(FROH_chr1+FROH_chr2+FROH_chr3+FROH_chr4+FROH_chr5+FROH_chr6+FROH_chr7+FROH_chr8+
                                    FROH_chr9+FROH_chr10+FROH_chr11+FROH_chr12+FROH_chr13+FROH_chr14+FROH_chr15+FROH_chr16+
                                    FROH_chr17+FROH_chr18+FROH_chr19+FROH_chr20+FROH_chr21+FROH_chr22+FROH_chr23+FROH_chr24+
                                    FROH_chr25+FROH_chr26+FROH_chr27+FROH_chr28+FROH_chr29+FROH_chr30+FROH_chr31+FROH_chr32+
                                    FROH_chr33)+BirthYear +MumCode,
                 data=Birth_wt_df,
+                ginverse = list(Code=Ainv), # code is recognised as the pedigree 
                 prior = prior,
                 pr=TRUE,#saves posterior dist for random effects i.e. what we want 
                 nitt=50000,burnin=5000)
 
 
+#save(model, file="PhD_3rdYR/Model outputs/mm_MCMCglmm_birthwt.RData")
+
+
+###############################################################################################
+###############################################################################################
+######### LOAD MODEL ALREADY RUN ##############################################################
+################################################################################################
 
 
 
+load("PhD_3rdYR/Model outputs/mm_MCMCglmm_birthwt.RData")
 #### getting output info ###
 
 summary(model)
