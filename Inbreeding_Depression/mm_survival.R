@@ -102,12 +102,18 @@ ped_ordered$Sire <- as.factor(ped_ordered$Sire)
 Ainv<-inverseA(ped_ordered, nodes="ALL")$Ainv
 
 
+save(surv_data,Ainv, file="PhD_3rdYR/Model_inputs/df_survival_forMCMCglmm.RData")
+
+#####################################################################
+##### this will now all be done on ash server #####################
+###################################################################
+
 k<-10000
 prior<-list(R=list(V=1,nu=0.002),
-            G=list(G1=list(V=1,nu=1,aplha.mu=0,alpha.V=k),
-                   G1=list(V=1,nu=1,aplha.mu=0,alpha.V=k),
-                   G1=list(V=1,nu=1,aplha.mu=0,alpha.V=k),
-                   G1=list(V=1,nu=1,aplha.mu=0,alpha.V=k)))
+            G=list(G1=list(V=0.25,nu=0.002,aplha.mu=0,alpha.V=k),
+                   G1=list(V=1,nu=1,aplha.mu=0,alpha.V=k), ## multimemberhsip part
+                   G1=list(V=0.25,nu=0.002,aplha.mu=0,alpha.V=k),
+                   G1=list(V=0.25,nu=0.002,aplha.mu=0,alpha.V=k)))
 
 #### RUNNING MULTI-MEMBERSHIP MODEL ####
 # changing FROH sum to FROH or FROH sum/33 is same really 
@@ -155,6 +161,20 @@ ggplot(data=FROH_sols, aes(x=CHR, y=solution, ymin=CI_lower, ymax=CI_upper)) +
   theme_bw()+  # use a white background                 
   theme(legend.position = "none")
 
+#### saving plot in wd
+ggsave(file="test_gg.png",
+       plot = ggplot( data=FROH_sols, aes(x=CHR, y=solution, ymin=CI_lower, ymax=CI_upper)) +
+  geom_pointrange() + #plots lines based on Y and lower and upper CI
+  geom_hline(yintercept=0, lty=2) +  # add a dotted line at x=1 after flip
+  coord_flip() +  # flip coordinates (puts labels on y axis)
+  labs(x="Linkage group", y="solution + CI", title = "Effect size of Linkage group FROH on Birthweight (kg)") +
+  theme_bw()+  # use a white background                 
+  theme(legend.position = "none"))
+
+  
+  
+  
+  
 
 
 

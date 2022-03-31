@@ -28,12 +28,12 @@ db<-"C:\\Users\\s1881212\\Documents\\Deer_database_08_2021\\RedDeer1.99.accdb" #
 con<-odbcConnectAccess2007(db)
 birth_wt<-sqlFetch(con, "sys_BirthWt") 
 # getting trait 
-life<-sqlFetch(con, "tbllife") %>% select(Code, BirthYear, MumCode, Sex) 
+life<-sqlFetch(con, "tbllife") %>% dplyr::select(Code, BirthYear, MumCode, Sex) 
 # getting table life with birth yr etc
-mum_stat<-sqlFetch(con, "sys_HindStatusAtConception") %>% select(-CalfBirthYear)%>%dplyr::rename(MumCode=Mum, Code=Calf)
+mum_stat<-sqlFetch(con, "sys_HindStatusAtConception") %>% dplyr::select(-CalfBirthYear)%>%dplyr::rename(MumCode=Mum, Code=Calf)
 # also getting the status of the hind when calf born
 #remember need the R-friendly button on!!###
-ped<-sqlFetch(con, "sys_Pedigree")%>%select(Code, MumCode, Sire)
+ped<-sqlFetch(con, "sys_Pedigree")%>%dplyr::select(Code, MumCode, Sire)
 odbcClose(con) #close connection
 
 ped[is.na(ped)] <- 0
@@ -45,7 +45,7 @@ ainv <- ainverse(ped)
 setwd("H:/")
 
 FROH<-read.table("PhD_3rdYR/Data_files/ROH_output/ROH_bp_092021.hom", header=T, stringsAsFactors = F)%>%
-  select(IID,CHR,KB) %>% dplyr::rename(Code=IID)
+  dplyr::select(IID,CHR,KB) %>% dplyr::rename(Code=IID)
 
 KB_perLG<-FROH%>%dplyr::group_by(Code, CHR)%>%
   dplyr::summarise(KB_chr=sum(KB))%>%
@@ -62,7 +62,7 @@ deersum <- deermap %>%
 
 
 froh_per_chr<-join(KB_perLG,deersum)%>% mutate(chr_froh=KB_chr/chr_length_KB)%>%
-  select(-Max_EstMb)%>% dcast(Code~CHR)
+  dplyr::select(-Max_EstMb)%>% dcast(Code~CHR)
 
 
 colnames(froh_per_chr) <- c("Code", paste0("FROH_chr", 1:33))
@@ -80,7 +80,7 @@ Focal_LG_FROH<-FROH%>%filter(CHR==k)%>%dplyr::group_by(Code, CHR)%>% #filter for
   ungroup %>% 
   complete(Code, CHR, fill = list(KB_chr = 0)) %>% join(deersum)%>% #joining to total length of chr
   mutate(focal_chr_froh=KB_chr/chr_length_KB)%>% # working out froh for focal chr 
-  select(Code, focal_chr_froh)#selecting important columns
+  dplyr::select(Code, focal_chr_froh)#selecting important columns
 
 
 deersum_minus_focal<-deersum%>%filter(CHR!=k)%>%filter(CHR!=34) #getting length of chr  minus focal chr
@@ -90,7 +90,7 @@ Rest_FROH<-FROH%>%filter(CHR!=k)%>%dplyr::group_by(Code)%>%# getting total KB in
   dplyr::summarise(KB_chr=sum(KB))%>%
   ungroup %>% 
   mutate(Rest_chr_froh=KB_chr/rest_genome_length)%>% #Kb in ROH minus focal/ genome length minus focal 
-  select(-KB_chr)
+  dplyr::select(-KB_chr)
   
 for_models[[k]]<-join(Focal_LG_FROH,Rest_FROH, type="right")%>%
   mutate_all(~replace(., is.na(.), 0))#replaces NAs with 0 using dplyr
@@ -111,7 +111,8 @@ run_model<-function(focal_LG_df){
   Birth_wt_df$MumCode <- factor(Birth_wt_df$MumCode)
 
 
-  chr_model_with_ped <- asreml(fixed= CaptureWt ~ 1 + Sex + AgeHrs + Rest_chr_froh + focal_chr_froh + MotherStatus, 
+  chr_model_with_ped <- asreml(fixed= CaptureWt ~ 1 + Sex + AgeHrs + 
+                                 Rest_chr_froh + focal_chr_froh + MotherStatus, 
                              random= ~ vm(Code,ainv)+BirthYear +MumCode, 
                              residual= ~ idv(units),
                              data=Birth_wt_df)
