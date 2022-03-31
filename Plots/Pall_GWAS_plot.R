@@ -9,10 +9,10 @@ setwd("M:/")
 
 CMpall<-read.table("PHD_2ndYR/Recombination_ROH/Data_files/Pall_CM_filt_moreSNPs.txt", header = TRUE,stringsAsFactors = FALSE)
 CMpall$CHR<-as.factor(CMpall$CHR)
-CMpall$CHR<-ordered(CMpall$CHR, levels = c("5", "18", "20", "9","11","12","19","15",
-                                          "30","21","23","1","14","33","25","13","17","29","28", "4",
-                                          "27","22", "24","8","3","31","6","7","2","16","32","10","26"))
-
+#CMpall$CHR<-ordered(CMpall$CHR, levels = c("5", "18", "20", "9","11","12","19","15",
+ #                                         "30","21","23","1","14","33","25","13","17","29","28", "4",
+  #                                        "27","22", "24","8","3","31","6","7","2","16","32","10","26"))
+#no longer need this 
 
 CMpall<-CMpall%>%arrange(CHR)%>%mutate(perc=pall*100)
 CMpall$Order <- 1:nrow(CMpall)
@@ -24,11 +24,11 @@ axis.set <- CMpall %>%
 
 CMpall$CHR<-as.numeric(CMpall$CHR)
 
-CM_g<-ggplot(CMpall, aes(Order, perc, col = as.factor(CHR%% 2))) +
+CM_g<-ggplot(CMpall, aes(Order, perc, col = as.factor(CHR%% 2), group=CHR)) +
   scale_colour_manual(values = c("coral", "cornflowerblue")) +
   geom_point() +
   theme_classic()+
-  labs(x="Chromosome (Size ordered)",y="ROH density \n(% of ids with a ROH)", title="Using genetic map positions")+
+  labs(x="Chromosome",y="ROH density \n(% of ids with a ROH)", title="Using genetic map positions")+
   theme(legend.position = "none",
         plot.title = element_text(hjust = 0.5),
         axis.text.x = element_text(size = 8, vjust = 0.5),
@@ -36,7 +36,8 @@ CM_g<-ggplot(CMpall, aes(Order, perc, col = as.factor(CHR%% 2))) +
   geom_hline(yintercept = 14.9, linetype="dashed", color = "red") +
   geom_hline(yintercept = 6.5, colour = "red")+
   scale_x_continuous(limits = c(0,25798), expand = c(0, 0), label = axis.set$CHR, breaks = axis.set$center)+
-  scale_y_continuous(limits = c(0,20))
+  scale_y_continuous(limits = c(0,20))+
+  geom_line(size=0.8)
 
 
 
@@ -44,9 +45,9 @@ CM_g<-ggplot(CMpall, aes(Order, perc, col = as.factor(CHR%% 2))) +
 
 BPpall<-read.table("PhD_3rdYR/Data_files/Rum_Pall_BP_filt_UPDATED_SANGER_POS.txt", header = TRUE,stringsAsFactors = FALSE)
 BPpall$CHR<-as.factor(BPpall$CHR)
-BPpall$CHR<-ordered(BPpall$CHR, levels = c("5", "18", "20", "9","11","12","19","15",
-                                           "30","21","23","1","14","33","25","13","17","29","28", "4",
-                                           "27","22", "24","8","3","31","6","7","2","16","32","10","26"))
+#BPpall$CHR<-ordered(BPpall$CHR, levels = c("5", "18", "20", "9","11","12","19","15",
+          #                                 "30","21","23","1","14","33","25","13","17","29","28", "4",
+                                 #          "27","22", "24","8","3","31","6","7","2","16","32","10","26"))
 
 
 BPpall<-BPpall%>%arrange(CHR)%>%mutate(perc=pall*100)
@@ -59,7 +60,7 @@ axis.set_BP <- BPpall %>%
 
 BPpall$CHR<-as.numeric(BPpall$CHR)
 
-BP_g<-ggplot(BPpall, aes(Order, perc, col = as.factor(CHR%% 2))) +
+BP_g<-ggplot(BPpall, aes(Order, perc, col = as.factor(CHR%% 2), group=CHR)) +
   scale_colour_manual(values = c("coral", "cornflowerblue")) +
   geom_point() +
   theme_classic()+
@@ -72,7 +73,8 @@ BP_g<-ggplot(BPpall, aes(Order, perc, col = as.factor(CHR%% 2))) +
   geom_hline(yintercept = 15.9, linetype="dashed", color = "red") +
   geom_hline(yintercept = 6.23, colour = "red")+
   scale_x_continuous(limits = c(0,28875), expand = c(0, 0), label = axis.set_BP$CHR, breaks = axis.set_BP$center)+
-  scale_y_continuous(limits = c(0,20))
+  scale_y_continuous(limits = c(0,20))+
+  geom_line(size=1)
 
 quantile(BPpall$pall, c(.01, .99)) ## 
 quantile(CMpall$pall, c(.01, .99)) ## 
@@ -80,7 +82,11 @@ mean(CMpall$pall)
 mean(BPpall$pall)
 
 
-BP_g +CM_g + plot_layout(ncol=1)
+GWAS_Rum<-BP_g +CM_g + plot_layout(ncol=1)
 
+#ggsave(file="PHD_2ndYR/Manuscript_draft/images/GWAS_Rum_31.png",
+ # plot=GWAS_Rum
+  
+#)
 
 
