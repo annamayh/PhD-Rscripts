@@ -44,7 +44,7 @@ ainv <- ainverse(ped)
 #################################################
 setwd("H:/")
 
-FROH<-read.table("PhD_3rdYR/Data_files/ROH_output/ROH_bp_092021.hom", header=T, stringsAsFactors = F)%>%
+FROH<-read.table("PhD_3rdYR/Data_files/ROH_output/ROH_search_UpdatedMb_01_2022.hom", header=T, stringsAsFactors = F)%>%
   dplyr::select(IID,CHR,KB) %>% dplyr::rename(Code=IID)
 
 KB_perLG<-FROH%>%dplyr::group_by(Code, CHR)%>%
@@ -52,17 +52,11 @@ KB_perLG<-FROH%>%dplyr::group_by(Code, CHR)%>%
   ungroup %>% 
   complete(Code, CHR, fill = list(KB_chr = 0)) #completes for all chromosomes 
 
+deermap <- read.csv("PhD_3rdYR/Data_files/Genome_assembly_mCerEla1.1.csv", header = T, stringsAsFactors = F)%>%
+  dplyr::filter(!CHR %in% c("All","All_auto","X","unplaced"))%>%select(1:4)
 
-deermap <- read.table("PhD_3rdYR/Data_files/TableS1_CervusElaphus_Final_Linkage_Map.txt", header = T, stringsAsFactors = F)
-deersum <- deermap %>% 
-  dplyr::group_by(CEL.LG) %>%
-  dplyr::summarise(Max_EstMb = max(Estimated.Mb.Position))%>%
-  dplyr::mutate(chr_length_KB=Max_EstMb/1000)%>%
-  dplyr::rename(CHR=CEL.LG)
-
-
-froh_per_chr<-join(KB_perLG,deersum)%>% mutate(chr_froh=KB_chr/chr_length_KB)%>%
-  dplyr::select(-Max_EstMb)%>% dcast(Code~CHR)
+froh_per_chr<-join(KB_perLG,deermap)%>% mutate(chr_froh=KB_chr/length_Kb)%>%
+  dplyr::select(-length_Mb,-length)%>% reshape2::dcast(Code~CHR)
 
 
 colnames(froh_per_chr) <- c("Code", paste0("FROH_chr", 1:33))
@@ -78,13 +72,13 @@ for (k in 1:33){
 Focal_LG_FROH<-FROH%>%filter(CHR==k)%>%dplyr::group_by(Code, CHR)%>% #filter for focal chr and grouping by id and chr
   dplyr::summarise(KB_chr=sum(KB))%>% #getting total KB per chr per id
   ungroup %>% 
-  complete(Code, CHR, fill = list(KB_chr = 0)) %>% join(deersum)%>% #joining to total length of chr
-  mutate(focal_chr_froh=KB_chr/chr_length_KB)%>% # working out froh for focal chr 
+  complete(Code, CHR, fill = list(KB_chr = 0)) %>% join(deermap)%>% #joining to total length of chr
+  mutate(focal_chr_froh=KB_chr/length_Kb)%>% # working out froh for focal chr 
   dplyr::select(Code, focal_chr_froh)#selecting important columns
 
 
-deersum_minus_focal<-deersum%>%filter(CHR!=k)%>%filter(CHR!=34) #getting length of chr  minus focal chr
-rest_genome_length<-sum(deersum_minus_focal$chr_length_KB) #adding all chr together to get length of genome minus focal
+deersum_minus_focal<-deermap%>%filter(CHR!=k)%>%filter(CHR!=34) #getting length of chr  minus focal chr
+rest_genome_length<-sum(deersum_minus_focal$length_Kb) #adding all chr together to get length of genome minus focal
 
 Rest_FROH<-FROH%>%filter(CHR!=k)%>%dplyr::group_by(Code)%>%# getting total KB in ROH for rest of genome
   dplyr::summarise(KB_chr=sum(KB))%>%
@@ -166,17 +160,14 @@ SE<-as.data.frame(map(all_LG_models, get_SE_focal_LG)%>%
 ############################################
 #### forest plot of effect sizes and CI ###
 ###########################################
-effect_SE<-effect_sizes%>%join(SE)%>% join(deersum)%>%
+effect_SE<-effect_sizes%>%join(SE)%>% 
   mutate(upper_CI=effect_size+(2*SE))%>%mutate(lower_CI=effect_size-(2*SE))#%>%order(effect_SE$chr_length_KB)
 
-effect_SE$overlap_zero<-ifelse(effect_SE$CHR %in% c("23", "24", "14"),"Yes","No")
+effect_SE$overlap_zero<-ifelse(effect_SE$CHR %in% c("1","10","12","14","18","19","22","26","30", "24","25"),"Yes","No")
 
 
-effect_SE$CHR<-as.factor(effect_SE$CHR)
-effect_SE$CHR<-ordered(effect_SE$CHR, levels = c("5", "18", "20", "9","11","12","19","15",
-                                           "30","21","23","1","14","33","25","13","17","29","28", "4",
-                                           "27","22", "24","8","3","31","6","7","2","16","32","10","26"))
-
+#effect_SE$CHR<-as.factor(effect_SE$CHR)
+effect_SE$CHR<-ordered(as.integer(effect_SE$CHR))
 
 ggplot(data=effect_SE, aes(x=CHR, y=effect_size, ymin=lower_CI, ymax=upper_CI,color=overlap_zero)) +
   geom_pointrange() + #plots lines based on Y and lower and upper CI

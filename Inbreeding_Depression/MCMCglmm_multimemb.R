@@ -50,15 +50,10 @@ KB_perLG<-FROH%>%dplyr::group_by(Code, CHR)%>%
   complete(Code, CHR, fill = list(KB_chr = 0)) #completes for all chromosomes 
 
 
-deermap <- read.table("PhD_3rdYR/Data_files/TableS1_CervusElaphus_Final_Linkage_Map.txt", header = T, stringsAsFactors = F)
-deersum <- deermap %>% 
-  dplyr::group_by(CEL.LG) %>%
-  dplyr::summarise(Max_EstMb = max(Estimated.Mb.Position))%>%
-  dplyr::mutate(chr_length_KB=Max_EstMb/1000)%>%
-  dplyr::rename(CHR=CEL.LG)
+deermap <- read.csv("PhD_3rdYR/Data_files/Genome_assembly_mCerEla1.1.csv", header = T, stringsAsFactors = F)%>%
+  dplyr::filter(!CHR %in% c("All","All_auto","X","unplaced"))%>%select(1:4)
 
-
-froh_per_chr<-join(KB_perLG,deersum)%>% mutate(chr_froh=KB_chr/chr_length_KB)%>%
+froh_per_chr<-join(KB_perLG,deermap)%>% mutate(chr_froh=KB_chr/length_Kb)%>%
   dplyr::select(-Max_EstMb)%>% reshape2::dcast(Code~CHR) %>% mutate(FROHsum = rowSums(.[2:34]))%>%mutate(FROH_sum_div=FROHsum/33)
 
 
@@ -123,7 +118,7 @@ model<-MCMCglmm(CaptureWt~1 + Sex + AgeHrs + MotherStatus + FROHsum, #need to fi
 
 
 
-load("PhD_3rdYR/Model outputs/mm_MCMCglmm_birthwt.RData")
+load("PhD_3rdYR/Model outputs/Birth_weight/mm_MCMCglmm_birthwt.RData")
 #### getting output info ###
 
 summary(model)
@@ -146,10 +141,9 @@ FROH_sols<-Random_table%>%filter(model_variable %like% "FROH_c")%>% add_column(C
 FROH_sols$CHR<-as.factor(FROH_sols$CHR)
 
 ggplot(data=FROH_sols, aes(x=CHR, y=solution, ymin=CI_lower, ymax=CI_upper)) +
-  geom_pointrange() + #plots lines based on Y and lower and upper CI
+  geom_pointrange(colour="grey50") + #plots lines based on Y and lower and upper CI
   geom_hline(yintercept=0, lty=2) +  # add a dotted line at x=1 after flip
   coord_flip() +  # flip coordinates (puts labels on y axis)
   labs(x="Linkage group", y="solution + CI", title = "Effect size of Linkage group FROH on Birthweight (kg)") +
   theme_bw()+  # use a white background                 
   theme(legend.position = "none")
-  
