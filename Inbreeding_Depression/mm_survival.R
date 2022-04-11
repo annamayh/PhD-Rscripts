@@ -17,16 +17,18 @@ library(MasterBayes)
 
 db<-"C:\\Users\\s1881212\\Documents\\Deer_database_08_2021\\RedDeer1.99.accdb" #open connection
 con<-odbcConnectAccess2007(db)
+
+mum_birthyr<-sqlFetch(con, "tbllife")%>%dplyr::select(Code,BirthYear)%>%dplyr::rename(mum_birthyear=BirthYear,MumCode=Code)
+mum_stat<-sqlFetch(con, "sys_HindStatusAtConception") %>% dplyr::select(-CalfBirthYear)%>%dplyr::rename(MumCode=Mum, Code=Calf)
+birth_wt<-sqlFetch(con, "sys_BirthWt")%>%dplyr::select(BirthWt,Code)
+
 life<-sqlFetch(con, "tbllife") %>% 
   dplyr::select(Code, BirthDay,BirthYear, BirthMonth, BirthYear,DeathDay,DeathMonth,DeathYear, Sex, MumCode, DeathType)%>%
-  mutate(age_at_death=DeathYear-BirthYear)%>%
-  filter(DeathType!= c("S","A"))
-  
+  filter(DeathType!= c("S","A","D"))%>%
+  drop_na(BirthYear,DeathYear,DeathMonth,BirthMonth)%>%
+  join(mum_birthyr)%>%mutate(mum_age=BirthYear-mum_birthyear)%>%
+  join(mum_stat)%>%join(birth_wt)
 
-# getting table life with birth yr etc
-mum_stat<-sqlFetch(con, "sys_HindStatusAtConception") %>% dplyr::select(-CalfBirthYear)%>%dplyr::rename(MumCode=Mum, Code=Calf)
-# also getting the status of the hind when calf born
-#remember need the R-friendly button on!!###
 ped<-sqlFetch(con, "sys_Pedigree")%>%dplyr::select(Code, MumCode,Sire)
 
 
@@ -36,21 +38,45 @@ ped$Sire <- as.factor(ped$Sire)
 
 odbcClose(con)
 
-
-## yearling survival i.e. up to May 1st of second yr
-life$yearling_surv<-NA
-life$yearling_surv<-if_else(life$age_at_death==0|life$age_at_death==1, 0,
-                            if_else(life$age_at_death==2 & life$DeathMonth < 5,0, 1))
-
-#if ids die over winter (Oct 1st - May 1st)                       
-life$winter_surv<-NA
-life$winter_surv<-if_else((life$age_at_death==0 & life$DeathMonth<5)|#dying in first few months of year less than a yr old
-                            (life$age_at_death==0 & life$DeathMonth>=5 & life$BirthMonth<=life$DeathMonth), 0, 1)#dying between Summer of of yr born and end of yr
+########################
+### neonatl survival ###
+#######################
 
 #ids that die before Oct 1st in their first yr
-life$neonatal_survival<-NA
-life$neonatal_survival<-if_else(life$age_at_death==0 & life$DeathMonth<10 & life$BirthMonth<=life$DeathMonth, 0, 1)
+neo<-life
 
+neo$neonatal_survival<-NA
+neo$neonatal_survival<-if_else(neo$DeathMonth<10 & neo$DeathYear==neo$BirthYear, 0, 1)
+
+
+########################
+### winter survival ####
+########################
+winter<-neo%>%filter(neonatal_survival==1) #removing 714 ids that died as neonates
+#if ids die over winter (Oct 1st - May 1st)                       
+winter$winter_surv<-NA
+winter$winter_surv<-if_else((winter$DeathYear==winter$BirthYear|
+                               winter$DeathYear==(winter$BirthYear)+1&winter$DeathMonth<5), 0, 1)#dying between Summer of of yr born and end of yr
+
+
+
+########################
+## yearling survival i.e. up to May 1st of second yr
+###########################
+year<-winter%>%filter(winter_surv==1) #removing  ids that die over winter
+
+year$yearling_surv<-NA
+year$yearling_surv<-if_else(year$DeathYear==(year$BirthYear)+2 & year$DeathMonth<5|
+                              year$DeathYear==(year$BirthYear)+1 & year$DeathMonth>5, 0, 1)
+
+##########################
+## juvenile survival #####
+##########################
+
+juv<-year%>%filter(yearling_surv==1)%>%dplyr::select(-yearling_surv,-winter_surv,-neonatal_survival)## removing 864 ids that died before first yr
+juv$juvenile_surv<-1
+
+juv_all<-life%>%join(juv)%>%mutate_at(vars("juvenile_surv"),~replace_na(.,0))
 
 
 #set up df
@@ -84,17 +110,33 @@ colnames(froh_per_chr) <- c("Code", paste0("FROH_chr", 1:33),"FROHsum","FROH_sum
 FROH_full<-read.table("PhD_3rdYR/Data_files/ROH_output/ROH_search_UpdatedMb_01_2022.hom.indiv", header=T, stringsAsFactors = F)%>%
   dplyr::select(IID,KB) %>% dplyr::rename(Code=IID)%>%mutate(FROH=KB/2495700)
 
+#####################################################################################################################
+
+##### set up dfs for models ###
 
 
-surv_df<-life%>%join(mum_stat)%>%join(froh_per_chr)%>%
+#neonatal_survival
+neonat_df<-neo%>%join(froh_per_chr)%>%
   join(FROH_full)%>%dplyr::select(-BirthDay,-DeathDay,-DeathMonth,-BirthMonth)%>%na.omit()
 
-#### first run normal model leaving one chr out then try mm ###
+## winter survival
+winter_df<-winter%>%join(froh_per_chr)%>%
+  join(FROH_full)%>%dplyr::select(-BirthDay,-DeathDay,-DeathMonth,-BirthMonth)%>%na.omit()
+
+#yearling survival
+year_df<-year%>%join(froh_per_chr)%>%
+  join(FROH_full)%>%dplyr::select(-BirthDay,-DeathDay,-DeathMonth,-BirthMonth)%>%na.omit()
+
+#juvenile survival
+juve_df<-juv_all%>%join(froh_per_chr)%>%
+  join(FROH_full)%>%dplyr::select(-BirthDay,-DeathDay,-DeathMonth,-BirthMonth)%>%na.omit()
+
+
 
 # prepping and inverting pedigree
-ids_in<-as.matrix(surv_df%>%dplyr::select(Code))
-pruned<-prunePed(ped, ids_in)
-ped_ordered<-orderPed(pruned)
+#ids_in<-as.matrix(surv_df%>%dplyr::select(Code))
+#pruned<-prunePed(ped, ids_in)
+ped_ordered<-orderPed(ped)
 ped_ordered$Code <- as.factor(ped_ordered$Code)
 ped_ordered$MumCode <- as.factor(ped_ordered$MumCode)
 ped_ordered$Sire <- as.factor(ped_ordered$Sire)
@@ -102,7 +144,7 @@ ped_ordered$Sire <- as.factor(ped_ordered$Sire)
 Ainv<-inverseA(ped_ordered, nodes="ALL")$Ainv
 
 
-save(surv_data,Ainv, file="PhD_3rdYR/Model_inputs/df_survival_forMCMCglmm.RData")
+save(neonat_df,winter_df,year_df,juve_df,Ainv, file="PhD_3rdYR/Model_inputs/df_survival_forMCMCglmm.RData")
 
 #####################################################################
 ##### this will now all be done on ash server #####################
@@ -117,7 +159,7 @@ prior<-list(R=list(V=1,nu=0.002),
 
 #### RUNNING MULTI-MEMBERSHIP MODEL ####
 # changing FROH sum to FROH or FROH sum/33 is same really 
-model2<-MCMCglmm(yearling_surv~1 + Sex + MotherStatus + FROHsum, #need to fit sum chrFROH  as continuous covariate,
+model2<-MCMCglmm(yearling_surv~1 + Sex + MotherStatus + FROHsum + mum_age+(mum_age^2)+BirthWt, #need to fit sum chrFROH  as continuous covariate,
                 random= ~ Code +
                   idv(FROH_chr1+FROH_chr2+FROH_chr3+FROH_chr4+FROH_chr5+FROH_chr6+FROH_chr7+FROH_chr8+
                         FROH_chr9+FROH_chr10+FROH_chr11+FROH_chr12+FROH_chr13+FROH_chr14+FROH_chr15+FROH_chr16+
@@ -125,11 +167,11 @@ model2<-MCMCglmm(yearling_surv~1 + Sex + MotherStatus + FROHsum, #need to fit su
                         FROH_chr25+FROH_chr26+FROH_chr27+FROH_chr28+FROH_chr29+FROH_chr30+FROH_chr31+FROH_chr32+
                         FROH_chr33)+BirthYear +MumCode,
                 family="categorical",
-                data=surv_df,
+                data=year_df,
                 ginverse = list(Code=Ainv), # code is recognised as the pedigree 
                 prior = prior,
                 pr=TRUE,#saves posterior dist for random effects i.e. what we want 
-                nitt=1000000,burnin=1500000, thin = 200)
+                nitt=10000,burnin=1500, thin = 200)
 
 #save(model2, file="PhD_3rdYR/Model outputs/mm_survival_17.03.RData")
 
