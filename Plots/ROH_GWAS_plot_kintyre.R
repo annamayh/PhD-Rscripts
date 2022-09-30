@@ -43,6 +43,12 @@ CM_plot_kint<-ggplot(CM_kint, aes(Order, perc, col = as.factor(CHR%% 2), group=C
   geom_line(size=1)
 
 
+quantile(CM_kint$perc, c(.01, .99)) ## 
+length(which(CM_kint$perc > 8.280255)) ##310 hotspot snps
+
+cm_hotspots_kint<-CM_kint%>%filter(perc> 8.280255)
+
+
 
 ###### BP genomwide plot using same script ################
 
@@ -80,9 +86,24 @@ BP_plot_kint<-ggplot(BP_kint, aes(Order, perc, col = as.factor(CHR%% 2), group=C
   geom_line(size=1)
 
 
+quantile(BP_kint$perc, c(.01, .99)) ## 
+length(which(BP_kint$perc > 8.917197 )) ##310 hotspot snps
+
+bp_hotspots_kint<-BP_kint%>%filter(perc> 8.917197 )
+
 
 B<-BP_plot_kint+CM_plot_kint+ plot_layout(ncol=1)
 B
 
+
+
 ggsave(file="PHD_2ndYR/Manuscript_draft/images/GWAS_Kintyre_31.png",plot=B)
+
+
+
+
+
+rum<-cm_hotspots%>%select(CHR, SNP, perc, BP)%>%rename(perc_cm=perc, bp_cm=BP)%>%join(bp_hotspots)%>%na.omit
+
+BP_kint$BP[BP_kint$SNP=="cela1_red_8_26504836"]
 

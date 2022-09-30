@@ -438,33 +438,36 @@ plot_pall%>%
 
 
 ####### STATS OF MODELS #######
+library(lme4)
 
-m1_mean<-lm(Mean_pall~Model, data=plot_pall)
-summary(m1_mean)
-m2_mean<-lm(Mean_pall~Model, data=plot_pall%>%subset(Pop_History=="Rum"))
-summary(m2_mean)
-m3_mean<-lm(Mean_pall~Model, data=plot_pall%>%subset(Pop_History=="Severe bottleneck"))
-summary(m3_mean)
-m4_mean<-lm(Mean_pall~Model, data=plot_pall%>%subset(Pop_History=="No bottleneck"))
-summary(m4_mean)
+
 m5_mean<-lmer(Mean_pall~Model+(1|Pop_History), data=plot_pall)
 summary(m5_mean)
 
 coef(summary(m5_mean))
 confint(m5_mean) ## can use these to get the confidence intervals 
 
+m4_mean<-lmer(Mean_pall~Model + (1|Pop_History), data=plot_pall%>%subset(Pop_History!="Severe bottleneck"))
+summary(m4_mean)
+confint(m4_mean)
 
-
-m2_max<-lm(Max_pall~Model, data=plot_pall)
-summary(m2_max)
+##max
 m3_max<-lmer(Max_pall~Model + (1|Pop_History), data=plot_pall)
 summary(m3_max)
 confint(m3_max)
 
+m4_max<-lmer(Max_pall~Model + (1|Pop_History), data=plot_pall%>%subset(Pop_History!="Severe bottleneck"))
+summary(m4_max)
+confint(m4_max)
 
+## top1 
 m3_top1<-lmer(Top_1~Model + (1|Pop_History), data=plot_pall)
 summary(m3_top1)
 confint(m3_top1)
+
+m4_top1<-lmer(Top_1~Model + (1|Pop_History), data=plot_pall%>%subset(Pop_History!="Severe bottleneck"))
+summary(m4_top1)
+confint(m4_top1)
 
 
 ### how to test if sim value is within range?
@@ -472,107 +475,119 @@ confint(m3_top1)
 
 ### for mean pall
 
-neu_m<-ggplot(pall_neutral, aes(x=Mean_pall))+
-  geom_histogram(binwidth = 0.005)+
-  geom_vline(xintercept=0.11304311, linetype=2, color = "black", size = 1)+
-  geom_vline(xintercept=0.06359613, linetype=2, color = "black", size = 1)+
-  geom_vline(xintercept=0.064, linetype=1, color = "red", size = 1)+
-  labs(title="Neutral")
+neu_m<-pall_neutral%>%mutate(Mean_perc=Mean_pall*100)%>%
+  ggplot(aes(x=Mean_perc))+
+  geom_histogram(binwidth = 1)+
+  geom_vline(xintercept=11.304311, linetype=2, color = "black", size = 1)+
+  geom_vline(xintercept=6.359613, linetype=2, color = "black", size = 1)+
+  geom_vline(xintercept=6.4, linetype=1, color = "red", size = 1)+
+  labs(title="M1: Neutral", x="Mean ROH density", tag="C")
 
 quantile(pall_sel_recomb$Mean_pall, probs = c(0.025, 0.975))  
-sel_m<-ggplot(pall_sel_recomb, aes(x=Mean_pall))+
-  geom_histogram(binwidth = 0.005)+
-  geom_vline(xintercept=0.10971928 , linetype=2, color = "black", size = 1)+
-  geom_vline(xintercept=0.06197386 , linetype=2, color = "black", size = 1)+
-  geom_vline(xintercept=0.064, linetype=1, color = "red", size = 1)+
-  labs(title="Selection +  v recombination")
+sel_m<-pall_sel_recomb%>%mutate(Mean_perc=Mean_pall*100)%>%
+  ggplot(aes(x=Mean_perc))+
+  geom_histogram(binwidth = 1)+
+  geom_vline(xintercept=10.971928 , linetype=2, color = "black", size = 1)+
+  geom_vline(xintercept=6.197386 , linetype=2, color = "black", size = 1)+
+  geom_vline(xintercept=6.4, linetype=1, color = "red", size = 1)+
+  labs(title="M3: Selection +  v recombination",x="Mean ROH density")
 
 quantile(pall_sel_s0.05$Mean_pall, probs = c(0.025, 0.975))  
-str_sel_m<-ggplot(pall_sel_s0.05, aes(x=Mean_pall))+
-  geom_histogram(binwidth = 0.005)+
-  geom_vline(xintercept=0.13815193 , linetype=2, color = "black", size = 1)+
-  geom_vline(xintercept=0.08076005 , linetype=2, color = "black", size = 1)+
-  geom_vline(xintercept=0.064, linetype=1, color = "red", size = 1)+
-  labs(title = "Stronger selection + v recombination")
+str_sel_m<-pall_sel_s0.05%>%mutate(Mean_perc=Mean_pall*100)%>%
+  ggplot(aes(x=Mean_perc))+
+  geom_histogram(binwidth = 1)+
+  geom_vline(xintercept=13.815193 , linetype=2, color = "black", size = 1)+
+  geom_vline(xintercept=8.076005 , linetype=2, color = "black", size = 1)+
+  geom_vline(xintercept=6.4, linetype=1, color = "red", size = 1)+
+  labs(title = "M4: Stronger selection + v recombination",x="Mean ROH density")
 
 quantile(pall_recomb$Mean_pall, probs = c(0.025, 0.975))
-recomb_m<-ggplot(pall_recomb, aes(x=Mean_pall))+
-  geom_histogram(binwidth = 0.005)+
-  geom_vline(xintercept=0.12411037 , linetype=2, color = "black", size = 1)+
-  geom_vline(xintercept=0.05933127 , linetype=2, color = "black", size = 1)+
-  geom_vline(xintercept=0.064, linetype=1, color = "red", size = 1)+
-  labs(title = "Varied recombination")
+recomb_m<-pall_recomb%>%mutate(Mean_perc=Mean_pall*100)%>%
+  ggplot(aes(x=Mean_perc))+
+  geom_histogram(binwidth = 1)+
+  geom_vline(xintercept=12.411037 , linetype=2, color = "black", size = 1)+
+  geom_vline(xintercept=5.933127 , linetype=2, color = "black", size = 1)+
+  geom_vline(xintercept=6.4, linetype=1, color = "red", size = 1)+
+  labs(title = "M2: Varied recombination",x="Mean ROH density")
 
 neu_m+recomb_m+sel_m+str_sel_m
 #
 
 ### now for threshold 
 quantile(pall_neutral$Top_1, probs = c(0.025, 0.975))  
-neu_t<-ggplot(pall_neutral, aes(x=Top_1))+
-  geom_histogram(binwidth = 0.01)+
-  geom_vline(xintercept=0.12525, linetype=2, color = "black", size = 1)+
-  geom_vline(xintercept=0.28275 , linetype=2, color = "black", size = 1)+
-  geom_vline(xintercept=0.149, linetype=1, color = "red", size = 1)+
-  labs(title="Neutral")
+neu_t<-pall_neutral%>%mutate(top1_perc=Top_1*100)%>%
+  ggplot(aes(x=top1_perc))+
+  geom_histogram(binwidth = 1)+
+  geom_vline(xintercept=12.525, linetype=2, color = "black", size = 1)+
+  geom_vline(xintercept=28.275 , linetype=2, color = "black", size = 1)+
+  geom_vline(xintercept=14.9, linetype=1, color = "red", size = 1)+
+  labs(title="M1: Neutral", x = "ROH threshold (99th percentile ROH density)", tag="A")
 
 quantile(pall_sel_recomb$Top_1, probs = c(0.025, 0.975))  
-sel_t<-ggplot(pall_sel_recomb, aes(x=Top_1))+
-  geom_histogram(binwidth = 0.01)+
-  geom_vline(xintercept=0.1155  , linetype=2, color = "black", size = 1)+
-  geom_vline(xintercept=0.2245  , linetype=2, color = "black", size = 1)+
-  geom_vline(xintercept=0.149, linetype=1, color = "red", size = 1)+
-  labs(title="Selection +  v recombination")
+sel_t<-pall_sel_recomb%>%mutate(top1_perc=Top_1*100)%>%
+  ggplot(aes(x=top1_perc))+
+  geom_histogram(binwidth = 1)+
+  geom_vline(xintercept=11.55  , linetype=2, color = "black", size = 1)+
+  geom_vline(xintercept=22.45  , linetype=2, color = "black", size = 1)+
+  geom_vline(xintercept=14.9, linetype=1, color = "red", size = 1)+
+  labs(title="M3: Selection +  v recombination" , x = "ROH threshold (99th percentile ROH density)")
 
 quantile(pall_sel_s0.05$Top_1, probs = c(0.025, 0.975))  
-str_sel_t<-ggplot(pall_sel_s0.05, aes(x=Top_1))+
-  geom_histogram(binwidth = 0.01)+
-  geom_vline(xintercept=0.15675  , linetype=2, color = "black", size = 1)+
-  geom_vline(xintercept=0.33975  , linetype=2, color = "black", size = 1)+
-  geom_vline(xintercept=0.149, linetype=1, color = "red", size = 1)+
-  labs(title = "Stronger selection + v recombination")
+str_sel_t<-pall_sel_s0.05%>%mutate(top1_perc=Top_1*100)%>%
+  ggplot(aes(x=top1_perc))+
+  geom_histogram(binwidth = 1)+
+  geom_vline(xintercept=15.675  , linetype=2, color = "black", size = 1)+
+  geom_vline(xintercept=33.975  , linetype=2, color = "black", size = 1)+
+  geom_vline(xintercept=14.9, linetype=1, color = "red", size = 1)+
+  labs(title = "M4: Stronger selection + v recombination" , x = "ROH threshold (99th percentile ROH density)")
 
 quantile(pall_recomb$Top_1, probs = c(0.025, 0.975))
-recomb_t<-ggplot(pall_recomb, aes(x=Top_1))+
-  geom_histogram(binwidth = 0.01)+
-  geom_vline(xintercept=0.12625  , linetype=2, color = "black", size = 1)+
-  geom_vline(xintercept=0.23500  , linetype=2, color = "black", size = 1)+
-  geom_vline(xintercept=0.149, linetype=1, color = "red", size = 1)+
-  labs(title = "Varied recombination")
+recomb_t<-pall_recomb%>%mutate(top1_perc=Top_1*100)%>%
+  ggplot(aes(x=top1_perc))+
+  geom_histogram(binwidth = 1)+
+  geom_vline(xintercept=12.625  , linetype=2, color = "black", size = 1)+
+  geom_vline(xintercept=23.500  , linetype=2, color = "black", size = 1)+
+  geom_vline(xintercept=14.9, linetype=1, color = "red", size = 1)+
+  labs(title = "M2: Varied recombination" , x = "ROH threshold (99th percentile ROH density)")
 
 neu_t+recomb_t+sel_t+str_sel_t
 
 ###### now max value ####
 
 quantile(pall_neutral$Max_pall, probs = c(0.025, 0.975))  
-neu_ma<-ggplot(pall_neutral, aes(x=Max_pall))+
-  geom_histogram(binwidth = 0.01)+
-  geom_vline(xintercept=0.1305 , linetype=2, color = "black", size = 1)+
-  geom_vline(xintercept=0.2980  , linetype=2, color = "black", size = 1)+
-  geom_vline(xintercept=0.234, linetype=1, color = "red", size = 1)+
-  labs(title="Neutral")
+neu_ma<-pall_neutral%>%mutate(max_perc=Max_pall*100)%>%
+  ggplot(aes(x=max_perc))+
+  geom_histogram(binwidth = 1)+
+  geom_vline(xintercept=13.05 , linetype=2, color = "black", size = 1)+
+  geom_vline(xintercept=29.80  , linetype=2, color = "black", size = 1)+
+  geom_vline(xintercept=23.4, linetype=1, color = "red", size = 1)+
+  labs(title="M1: Neutral", x="Maximum ROH denisty", tag="B")
 
 quantile(pall_sel_recomb$Max_pall, probs = c(0.025, 0.975))  
-sel_ma<-ggplot(pall_sel_recomb, aes(x=Max_pall))+
-  geom_histogram(binwidth = 0.01)+
-  geom_vline(xintercept=0.1255   , linetype=2, color = "black", size = 1)+
-  geom_vline(xintercept=0.2400   , linetype=2, color = "black", size = 1)+
-  geom_vline(xintercept=0.234, linetype=1, color = "red", size = 1)+
-  labs(title="Selection +  v recombination")
+sel_ma<-pall_sel_recomb%>%mutate(max_perc=Max_pall*100)%>%
+  ggplot(aes(x=max_perc))+
+  geom_histogram(binwidth = 1)+
+  geom_vline(xintercept=12.55   , linetype=2, color = "black", size = 1)+
+  geom_vline(xintercept=24.00   , linetype=2, color = "black", size = 1)+
+  geom_vline(xintercept=23.4, linetype=1, color = "red", size = 1)+
+  labs(title="M3: Selection +  v recombination",x="Maximum ROH denisty")
 
 quantile(pall_sel_s0.05$Max_pall, probs = c(0.025, 0.975))  
-str_sel_ma<-ggplot(pall_sel_s0.05, aes(x=Max_pall))+
-  geom_histogram(binwidth = 0.01)+
-  geom_vline(xintercept=0.17    , linetype=2, color = "black", size = 1)+
-  geom_vline(xintercept=0.39   , linetype=2, color = "black", size = 1)+
-  geom_vline(xintercept=0.234, linetype=1, color = "red", size = 1)+
-  labs(title = "Stronger selection + v recombination")
+str_sel_ma<-pall_sel_s0.05%>%mutate(max_perc=Max_pall*100)%>%
+  ggplot(aes(x=max_perc))+
+  geom_histogram(binwidth = 1)+
+  geom_vline(xintercept=17    , linetype=2, color = "black", size = 1)+
+  geom_vline(xintercept=39   , linetype=2, color = "black", size = 1)+
+  geom_vline(xintercept=23.4, linetype=1, color = "red", size = 1)+
+  labs(title = "M4: Stronger selection + v recombination", x="Maximum ROH denisty")
 
 quantile(pall_recomb$Max_pall, probs = c(0.025, 0.975))
-recomb_ma<-ggplot(pall_recomb, aes(x=Max_pall))+
-  geom_histogram(binwidth = 0.01)+
-  geom_vline(xintercept=0.1300   , linetype=2, color = "black", size = 1)+
-  geom_vline(xintercept=0.2675   , linetype=2, color = "black", size = 1)+
-  geom_vline(xintercept=0.234, linetype=1, color = "red", size = 1)+
-  labs(title = "Varied recombination")
+recomb_ma<-pall_recomb%>%mutate(max_perc=Max_pall*100)%>%
+  ggplot(aes(x=max_perc))+
+  geom_histogram(binwidth = 1)+
+  geom_vline(xintercept=13.00   , linetype=2, color = "black", size = 1)+
+  geom_vline(xintercept=26.75   , linetype=2, color = "black", size = 1)+
+  geom_vline(xintercept=23.4, linetype=1, color = "red", size = 1)+
+  labs(title = "M2: Varied recombination", x="Maximum ROH denisty")
 
 neu_ma+recomb_ma+sel_ma+str_sel_ma

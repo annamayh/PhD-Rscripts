@@ -39,6 +39,14 @@ CM_g<-ggplot(CMpall, aes(Order, perc, col = as.factor(CHR%% 2), group=CHR)) +
   scale_y_continuous(limits = c(0,20))+
   geom_line(size=0.8)
 
+### get location of hotspots 
+mean(CMpall$perc) ##mean pall cm= 0.0577 (11/01/2021) lower than before when had less snps
+
+quantile(CMpall$perc, c(.01, .99)) ## 
+length(which(CMpall$perc > 14.86795 )) ##310 hotspot snps
+
+cm_hotspots<-CMpall%>%filter(perc> 14.86795)
+
 
 
 ###### BP genomwide plot using same script ################
@@ -76,17 +84,29 @@ BP_g<-ggplot(BPpall, aes(Order, perc, col = as.factor(CHR%% 2), group=CHR)) +
   scale_y_continuous(limits = c(0,20))+
   geom_line(size=1)
 
-quantile(BPpall$pall, c(.01, .99)) ## 
-quantile(CMpall$pall, c(.01, .99)) ## 
-mean(CMpall$pall)
-mean(BPpall$pall)
+quantile(BPpall$perc, c(.01, .99)) ## 
+length(which(BPpall$perc > 15.9197913 )) ##310 hotspot snps
+
+bp_hotspots<-BPpall%>%filter(perc> 15.9197913)
 
 
-GWAS_Rum<-BP_g +CM_g + plot_layout(ncol=1)
+A<-BP_g +CM_g + plot_layout(ncol=1)
 
 #ggsave(file="PHD_2ndYR/Manuscript_draft/images/GWAS_Rum_31.png",
  # plot=GWAS_Rum
   
 #)
+
+BPpall$BP[BPpall$SNP=="cela1_red_26_30528628"]
+
+kint_filt<-BP_kint%>%select(perc,SNP)
+BP<-BPpall%>%select(perc, SNP)%>%rename(perc_r=perc)%>%join(kint_filt)%>%na.omit()
+
+cor.test(BP$perc_r, BP$perc, method="pearson")
+###
+kint_filt_c<-CM_kint%>%select(perc,SNP)
+CM<-CMpall%>%select(perc, SNP)%>%rename(perc_r=perc)%>%join(kint_filt_c)%>%na.omit()
+
+cor(CM$perc_r, CM$perc)
 
 

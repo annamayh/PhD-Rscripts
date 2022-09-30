@@ -51,16 +51,16 @@ KB_perLG<-FROH%>%dplyr::group_by(Code, CHR)%>%
 
 
 deermap <- read.csv("PhD_3rdYR/Data_files/Genome_assembly_mCerEla1.1.csv", header = T, stringsAsFactors = F)%>%
-  dplyr::filter(!CHR %in% c("All","All_auto","X","unplaced"))%>%select(1:4)
+  dplyr::filter(!CHR %in% c("All","All_auto","X","unplaced"))
 
 froh_per_chr<-join(KB_perLG,deermap)%>% mutate(chr_froh=KB_chr/length_Kb)%>%
-  dplyr::select(-Max_EstMb)%>% reshape2::dcast(Code~CHR) %>% mutate(FROHsum = rowSums(.[2:34]))%>%mutate(FROH_sum_div=FROHsum/33)
+  dplyr::select(-length_Mb,-length)%>% reshape2::dcast(Code~CHR) %>% mutate(FROHsum = rowSums(.[2:34]))%>%mutate(FROH_sum_div=FROHsum/33)
 
 
 colnames(froh_per_chr) <- c("Code", paste0("FROH_chr", 1:33),"FROHsum","FROH_sum_div")
 
 FROH_full<-read.table("PhD_3rdYR/Data_files/ROH_output/ROH_search_UpdatedMb_01_2022.hom.indiv", header=T, stringsAsFactors = F)%>%
-  dplyr::select(IID,KB) %>% dplyr::rename(Code=IID)%>%mutate(FROH=KB/2495700)
+  dplyr::select(IID,KB) %>% dplyr::rename(Code=IID)%>%mutate(FROH=KB/2591865)
 
 Birth_wt_df<-birth_wt%>%join(life)%>%join(mum_stat)%>%join(froh_per_chr)%>%join(FROH_full)%>%na.omit()
 
@@ -108,7 +108,7 @@ model<-MCMCglmm(CaptureWt~1 + Sex + AgeHrs + MotherStatus + FROHsum, #need to fi
                 nitt=50000,burnin=5000)
 
 
-#save(model, file="PhD_3rdYR/Model outputs/mm_MCMCglmm_birthwt.RData")
+#save(model, file="PhD_3rdYR/Model outputs/Birth_weight/mm_birthwt_interpretable.RData")
 
 
 ###############################################################################################
@@ -118,7 +118,7 @@ model<-MCMCglmm(CaptureWt~1 + Sex + AgeHrs + MotherStatus + FROHsum, #need to fi
 
 
 
-load("PhD_3rdYR/Model outputs/Birth_weight/mm_MCMCglmm_birthwt.RData")
+load("PhD_3rdYR/Model outputs/Birth_weight/mm_birthwt.RData")
 #### getting output info ###
 
 summary(model)
@@ -126,10 +126,10 @@ summary(model)
 
 plot(model)
 
-names <- apply(model$Sol,2,mean) %>% names ## gets names of all random variables 
+names <- apply(model$Sol,2,mean) %>% names ## gets names of all random variables, 2 = all down row
 sols<-apply(model$Sol,2,mean)#gets mean of all solutions i.e. the effect size of random effects 
-CI_upper<-apply(model$Sol,2,quantile,probs = c(0.975)) #gets upper confidence interval for all solutions 
-CI_lower<-apply(model$Sol,2,quantile,probs = c(0.025)) #gets lower CI for all solutions
+CI_upper<-apply(model$Sol,2,quantile,probs = c(0.95)) #gets upper confidence interval for all solutions 
+CI_lower<-apply(model$Sol,2,quantile,probs = c(0.05)) #gets lower CI for all solutions
 
 Random_table<-tibble(sols,row.names=names)%>%add_column(CI_upper)%>%add_column(CI_lower)
 
@@ -147,3 +147,37 @@ ggplot(data=FROH_sols, aes(x=CHR, y=solution, ymin=CI_lower, ymax=CI_upper)) +
   labs(x="Linkage group", y="solution + CI", title = "Effect size of Linkage group FROH on Birthweight (kg)") +
   theme_bw()+  # use a white background                 
   theme(legend.position = "none")
+
+
+#####################################################################################################################
+###### getting in terms of other bw model ##########################################################################
+###################################################################################################################
+
+sols_full<-as.data.frame(model$Sol)%>%dplyr::select(matches("FROH"))%>% ## taking out sols with FROH included
+  dplyr::mutate(across(2:34, ~.x + FROHsum)) ## adding FROHsum to chrFROH values
+
+names <- apply(sols_full,2,mean) %>% names ## gets names of all random variables, 2 = all down row
+sols<-apply(sols_full,2,mean)#gets mean of all solutions i.e. the effect size of random effects 
+CI_upper<-apply(sols_full,2,quantile,probs = c(0.95)) #gets upper confidence interval for all solutions 
+CI_lower<-apply(sols_full,2,quantile,probs = c(0.05)) #gets lower CI for all solutions
+
+Random_table<-tibble(sols,row.names=names)%>%add_column(CI_upper)%>%add_column(CI_lower)
+
+names(Random_table)[1]<-"solution"
+names(Random_table)[2]<-"model_variable"
+
+FROH_sols<-Random_table%>%filter(model_variable %like% "FROH_c")%>% add_column(CHR = 1:33) ##filtering all random variables for those including FROH
+
+FROH_sols$CHR<-as.factor(FROH_sols$CHR)
+
+ggplot(data=FROH_sols, aes(x=CHR, y=solution, ymin=CI_lower, ymax=CI_upper)) +
+  geom_pointrange(colour="grey50") + #plots lines based on Y and lower and upper CI
+  geom_hline(yintercept=0, lty=2) +  # black line is 0
+  geom_hline(yintercept=-0.13, lty=1,colour="red") + ## red line is the average effect of all chromosomes 
+  coord_flip() +  # flip coordinates (puts labels on y axis)
+  labs(x="Chromosome", y="solution + CI", title = "Effect size of chromosome FROH on Birthweight (kg)") +
+  theme_bw()+  # use a white background                 
+  theme(legend.position = "none")
+
+
+sum(FROH_sols$solution) ## givs the total effect of all chromosomes shown to be 4.3kg
