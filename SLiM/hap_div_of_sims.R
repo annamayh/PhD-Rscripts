@@ -9,19 +9,26 @@ setwd("H:/")
 all_sims_hap_div=list()
 
 
+
+sim_num=1
+
 for (sim_num in 1:25){
   
-      if (sim_num==7)next #'for failed sims on dud machine'
-      if (sim_num==15)next
-      if (sim_num==22)next
-      if (sim_num==24)next
-  
+      # if (sim_num==7)next #'for failed sims on dud machine'
+      # if (sim_num==15)next
+      # if (sim_num==22)next
+      # if (sim_num==24)next
+      # 
         
     
     sim=read.table(paste0("PhD_4th_yr/Heredity_ROH_density_manuscript/hap_div_sims/Rum_neutral_output/SLiM_output_sim_",sim_num))%>%
       select(-V1,-V3,-V4, -V5, -V6, -V7, -V8, -V9)#%>%#removing other random columns you get from vcf files
     
-    sims_snps=sim%>%mutate(V2 = ifelse(duplicated(V2), paste0(V2,"_2"),V2))%>% ## making snp names unique for duplicated names
+    rand=sample(1:nrow(sim), 1634)## 1634 = average snp density for searched ROH in real dataset
+    
+    sims_sub=sim[(rand),] #subsetting the number of snps to give the average num of snps in real data
+    
+    sims_snps=sims_sub%>%#mutate(V2 = ifelse(duplicated(V2), paste0(V2,"_2"),V2))%>% ## making snp names unique for duplicated names
       t()%>%as_tibble()  ##trnaspose so SNPs are columns and IDs are rows
     
     haps=sims_snps%>%row_to_names(row_number = 1)
@@ -32,11 +39,11 @@ for (sim_num in 1:25){
     ## hap div function taken from own github and modified slightly
     Haplotype_diversity <- list()
     
-    for (i in seq(from = 1, to = ncol(phased_lab), by = 100)) {
-          until <- ifelse((i+99) > ncol(phased_lab),  ncol(phased_lab), i+99) #10 SNP windows 
+    for (i in seq(from = 1, to = ncol(phased_lab), by = 10)) {
+          until <- ifelse((i+9) > ncol(phased_lab),  ncol(phased_lab), i+9) #10 SNP windows 
           if(until==i){break} #if window is only 1 snp long 
           window_temp <- phased_lab[, c(i:(until))]
-          if (ncol(window_temp)<100){break}
+          if (ncol(window_temp)<10){break}
           window_unite <- window_temp %>% 
             unite("string_haplo", na.rm = TRUE, remove = FALSE) %>% 
             group_by(string_haplo)%>% #grouping by unique haplotype
