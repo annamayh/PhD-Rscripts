@@ -271,15 +271,46 @@ A+B
 
 ###############################################################################
 
-ggplot(all_sims_unlisted_neu, aes(window_number, D, colour=hotspot, group=simulation_num)) + geom_point()+
+all_sims_unlisted_neu$order=1:nrow(all_sims_unlisted_neu)
+
+
+all_sims_unlisted_neu_plot=all_sims_unlisted_neu%>%filter(window_number!=1)%>%filter(window_number!=2)%>%
+  filter(window_number!=3)%>%filter(window_number!=4)%>%filter(window_number!=5)%>%filter(window_number!=6)%>%#
+  filter(window_number!=7)%>%filter(window_number!=8)%>%filter(window_number!=9)%>%filter(window_number!=10)
+
+ggplot(all_sims_unlisted_neu_plot, aes(order, D, colour=hotspot, group=simulation_num)) + geom_point()+
   theme_classic()+
-  scale_fill_brewer(palette="Dark2")
+  coord_flip() +  # flip coordinates (puts labels on y axis)
+  
   
 
-ggplot(all_sims_unlisted_sel, aes(window_number, D, colour=hotspot, group=simulation_num)) + geom_point()+
-  theme_classic()+
-  scale_fill_brewer(palette="Dark2")
 
+
+
+
+
+
+
+
+all_sims_unlisted_sel_plot=all_sims_unlisted_sel%>%filter(window_number!=1)%>%filter(window_number!=2)%>%
+  filter(window_number!=3)%>%filter(window_number!=4)%>%filter(window_number!=5)%>%filter(window_number!=6)%>%#
+  filter(window_number!=7)%>%filter(window_number!=8)%>%filter(window_number!=9)%>%filter(window_number!=10)
+
+all_sims_unlisted_sel_plot$order=1:nrow(all_sims_unlisted_sel_plot)
+
+
+ggplot(all_sims_unlisted_sel_plot, aes(order, D, colour=hotspot)) + geom_point()+
+  theme_classic()
+
+
+
+
+
+hap_div_1=as.data.frame(all_sims_hap_div_neutral[1])
+
+
+ggplot(hap_div_1, aes(window_number, D, colour=hotspot)) + geom_point()+
+  theme_classic()
 
 
 
