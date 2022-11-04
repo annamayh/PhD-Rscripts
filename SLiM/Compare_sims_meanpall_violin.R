@@ -251,6 +251,7 @@ plot_pall<-plot_pall%>%mutate(Top1_perc=Top_1*100)
 no_bottle<-rbind(pall_nobtl,pall_nobtl_s_r,pall_nobtl_s0.05_r,pall_nobtl_r)
 
 ## This function allows us to specify which facet to annotate
+## This function allows us to specify which facet to annotate
 annotation_custom2 <- function (grob, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, data) 
 {
   layer(data = data, stat = StatIdentity, position = PositionIdentity, 
@@ -259,8 +260,6 @@ annotation_custom2 <- function (grob, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax
                                           xmin = xmin, xmax = xmax, 
                                           ymin = ymin, ymax = ymax))
 }
-
-
 
 ###################################################################################################################################
 notbl_inset<-no_bottle%>%mutate(Top1_perc=Top_1*100)%>%
@@ -273,7 +272,7 @@ notbl_inset<-no_bottle%>%mutate(Top1_perc=Top_1*100)%>%
     axis.title.x = element_blank(),
     axis.title.y = element_blank(), 
     axis.text.x = element_blank(), 
-    axis.text = element_text(size=20)
+    axis.text = element_text(size=10)
     
   )+
   theme(legend.position = "none")+
@@ -285,8 +284,6 @@ notbl_inset<-no_bottle%>%mutate(Top1_perc=Top_1*100)%>%
 top_ann_text <- data.frame(Model = "Varied\nrecombination",Top1_perc = 17,lab = "Rum actual value",
                            Pop_History = factor("No bottleneck",levels = c("Rum","Severe bottleneck","No bottleneck")))
 
-top_ann_text_kint <- data.frame(Model = "Varied\nrecombination",Top1_perc = 10.5,lab = "Kintyre actual value",
-                                Pop_History = factor("No bottleneck",levels = c("Rum","Severe bottleneck","No bottleneck")))
 
 ## plotting top 1%
 Top_1<-plot_pall%>%mutate(Top1_perc=Top_1*100)%>%
@@ -303,16 +300,15 @@ Top_1<-plot_pall%>%mutate(Top1_perc=Top_1*100)%>%
     axis.title.x = element_blank(),
     axis.title.y = element_text(size=12),
     axis.text.x = element_text(face="bold"),
-    axis.text.y = element_text(face="bold")
-    
-  )+
+    axis.text.y = element_text(face="bold"))+
   facet_wrap(~Pop_History)+
   theme(legend.position = "none")+
   stat_summary(fun=mean, geom="point",size=2)+ # adds the mean dot 
   geom_hline(yintercept = 14.9, linetype=4, color = "black", size = 1)+
-  geom_hline(yintercept = 8.3, linetype=5, color = "black", size = 1)+
   geom_text(data = top_ann_text,label = "Rum actual value")+
-  geom_text(data = top_ann_text_kint,label = "Kintyre actual value")
+  annotation_custom2(grob=ggplot2::ggplotGrob(notbl_inset),
+                    data=data.frame(Pop_History="No bottleneck", Model="Neutral"),
+                    ymin=30, ymax=80, xmin=-Inf, xmax=Inf)
  # gg_inset(ggplot2::ggplotGrob(notbl_inset), data = data.frame(Pop_History = "No bottleneck"),Model = "Varied\nrecombination",
   #         xmin = -Inf, xmax=Inf,ymin = -Inf, ymax = Inf)
 
@@ -324,8 +320,24 @@ Top_1<-plot_pall%>%mutate(Top1_perc=Top_1*100)%>%
 max_ann_text <- data.frame(Model = "Varied\nrecombination",Max_perc = 26,lab = "Rum actual value",
                            Pop_History = factor("No bottleneck",levels = c("Rum","Severe bottleneck","No bottleneck")))
 
-max_ann_text_kint <- data.frame(Model = "Varied\nrecombination",Max_perc = 16,lab = "Kintyre actual value",
-                                Pop_History = factor("No bottleneck",levels = c("Rum","Severe bottleneck","No bottleneck")))
+
+max_notbl_inset<-no_bottle%>%mutate(Max_perc=Max_pall*100)%>%
+  mutate(Model = fct_relevel(Model, "Neutral","Varied\nrecombination","Varied\nrecombination\n+ selection","Varied\nrecombination\n+strong\nselection"))%>%
+  ggplot(aes(x=Model, y=Max_perc, fill=Model))+
+  geom_violin(position="dodge", alpha=0.5)+
+  theme_classic()+
+  scale_fill_manual(values = wes_palette("Darjeeling1", n=5))+
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(), 
+    axis.text.x = element_blank(), 
+    axis.text = element_text(size=10)
+    
+  )+
+  theme(legend.position = "none")+
+  stat_summary(fun=mean, geom="point",size=2)
+
+
 
 
 Max_plot<-plot_pall%>%mutate(Max_perc=Max_pall*100)%>%
@@ -349,22 +361,44 @@ Max_plot<-plot_pall%>%mutate(Max_perc=Max_pall*100)%>%
   theme(legend.position = "none")+
   stat_summary(fun=mean, geom="point",size=2)+
   geom_hline(yintercept = 23.4, linetype=4, color = "black", size = 1)+
-  geom_hline(yintercept = 12.7, linetype=5, color = "black", size = 1)+
   geom_text(data = max_ann_text,label = "Rum actual value")+
-  geom_text(data = max_ann_text_kint,label = "Kintyre actual value")
-#annotation_custom2(grob=ggplotGrob(inset_mean), 
- #                  data = data.frame(Model="No bottleneck", Mean_pall=0.2),
-  #                 ymin = 0.2, ymax=0.4, xmin="Varied\nRecomb", xmax="Varied\nrecomb\n+stronger\nselection")
+  annotation_custom2(grob=ggplot2::ggplotGrob(max_notbl_inset),
+                     data=data.frame(Pop_History="No bottleneck", Model="Neutral"),
+                     ymin=30, ymax=80, xmin=-Inf, xmax=Inf)
 
 
-Top_1/Max_plot
+Fig4=Top_1/Max_plot
+
+ggsave("PhD_4th_yr/Heredity_ROH_density_manuscript/Main_images/Violin_ggsave.png",
+       plot=Fig4, width = 15, height = 10)
+
+
+
+
 #####################################################################################################
 
 mean_ann_text <- data.frame(Model = "Varied\nrecombination\n+ selection",Mean_perc = 7.5,lab = "Rum actual value",
                             Pop_History = factor("No bottleneck",levels = c("Rum","Severe bottleneck","No bottleneck")))
 
-mean_ann_text_kint <- data.frame(Model = "Varied\nrecombination\n+ selection",Mean_perc = 4.5,lab = "Kintyre actual value",
-                                 Pop_History = factor("No bottleneck",levels = c("Rum","Severe bottleneck","No bottleneck")))
+
+mean_notbl_inset<-no_bottle%>%mutate(Mean_perc=Mean_pall*100)%>%
+  mutate(Model = fct_relevel(Model, "Neutral","Varied\nrecombination","Varied\nrecombination\n+ selection","Varied\nrecombination\n+strong\nselection"))%>%
+  ggplot(aes(x=Model, y=Mean_perc, fill=Model))+
+  geom_violin(position="dodge", alpha=0.5)+
+  theme_classic()+
+  scale_fill_manual(values = wes_palette("Darjeeling1", n=5))+
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(), 
+    axis.text.x = element_blank(), 
+    axis.text = element_text(size=10)
+    
+  )+
+  theme(legend.position = "none")+
+  stat_summary(fun=mean, geom="point",size=2)
+
+
+
 
 Mean_plot<-plot_pall%>%mutate(Mean_perc=Mean_pall*100)%>%
   mutate(Model = fct_relevel(Model, "Neutral","Varied\nrecombination","Varied\nrecombination\n+ selection","Varied\nrecombination\n+strong\nselection"))%>%
@@ -387,12 +421,10 @@ Mean_plot<-plot_pall%>%mutate(Mean_perc=Mean_pall*100)%>%
   theme(legend.position = "none")+
   stat_summary(fun=mean, geom="point",size=2)+
   geom_hline(yintercept = 6.4, linetype=4, color = "black", size = 1)+
-  geom_hline(yintercept = 3.4, linetype=5, color = "black", size = 1)+
   geom_text(data = mean_ann_text,label = "Rum actual value")+
-  geom_text(data = mean_ann_text_kint,label = "Kintyre actual value")
-annotation_custom2(grob=ggplotGrob(inset_mean), 
-                   data = data.frame(Model="No bottleneck", Mean_pall=0.2),
-                   ymin = 0.2, ymax=0.4, xmin="Varied\nRecomb", xmax="Varied\nrecomb\n+strong\nselection")
+  annotation_custom2(grob=ggplot2::ggplotGrob(mean_notbl_inset),
+                     data=data.frame(Pop_History="No bottleneck", Model="Neutral"),
+                     ymin=10, ymax=25, xmin=-Inf, xmax=Inf)
 
 
 ## inset plot 
