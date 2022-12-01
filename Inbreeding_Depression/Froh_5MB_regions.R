@@ -15,12 +15,14 @@ FROH<-read.table("PhD_3rdYR/Data_files/ROH_output/ROH_search_UpdatedMb_01_2022.h
 focal_chr=FROH%>%filter(CHR==1)
 
 froh_split_full=list()
-kb_in_roh=list()
+#kb_in_roh=list()
 
-row=2
-i=0
+row=7
+i=30
 
 for (row in 1:nrow(focal_chr)){
+
+  kb_in_roh=list()
   
   
   for (i in seq(from = 0, to = 100, by = 10)){
@@ -36,17 +38,17 @@ for (row in 1:nrow(focal_chr)){
     kb_in_roh[[i]]=ROH_length/10
   
   # if ROH starts within window but spans multiple windows 
-  } else if(window_start_diff<10&window_start_diff>0&window_end_diff>10&ROH_length>10){
+  } else if(window_start_diff<10&window_start_diff>0&window_end_diff>10){
     kb_in_roh[[i]]=(10-window_start_diff)/10
   #If ROH started in window before but ends in the current window 
-  }else if(window_start_diff<0&window_start_diff>-10&window_end_diff<10&ROH_length>10) {
+  }else if(window_start_diff<0&window_start_diff>-10&window_end_diff<10&window_end_diff>0) {
     second_window=i-focal_chr$End_Mb[row]
     kb_in_roh[[i]]=(-second_window/10)
   #if ROH starts in window and end in next/other window
   }else if(window_start_diff<0&window_end_diff>10&ROH_length>10) {
     kb_in_roh[[i]]=1} else{
       break}
-  }
+    }
 
   names(kb_in_roh) <- seq_along(kb_in_roh)#converts window starts to name of list 
   froh_split=as.data.frame(kb_in_roh%>%
@@ -60,6 +62,9 @@ for (row in 1:nrow(focal_chr)){
   colnames(froh_split) <- c("Window_start","Kb_in_roh","Code")
   
   froh_split_full[[row]]=froh_split
+  
+  #kb_in_roh=list()
+  
   
   }
 
