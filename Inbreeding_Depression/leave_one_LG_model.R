@@ -53,7 +53,7 @@ KB_perLG<-FROH%>%dplyr::group_by(Code, CHR)%>%
   complete(Code, CHR, fill = list(KB_chr = 0)) #completes for all chromosomes 
 
 deermap <- read.csv("PhD_3rdYR/Data_files/Genome_assembly_mCerEla1.1.csv", header = T, stringsAsFactors = F)%>%
-  dplyr::filter(!CHR %in% c("All","All_auto","X","unplaced"))%>%select(1:4)
+  dplyr::filter(!CHR %in% c("All","All_auto","X","unplaced"))
 
 froh_per_chr<-join(KB_perLG,deermap)%>% mutate(chr_froh=KB_chr/length_Kb)%>%
   dplyr::select(-length_Mb,-length)%>% reshape2::dcast(Code~CHR)
@@ -64,6 +64,7 @@ colnames(froh_per_chr) <- c("Code", paste0("FROH_chr", 1:33))
 
 ########
 
+k=1
 
 for_models<-list()
 for (k in 1:33){
@@ -90,6 +91,8 @@ for_models[[k]]<-join(Focal_LG_FROH,Rest_FROH, type="right")%>%
   mutate_all(~replace(., is.na(.), 0))#replaces NAs with 0 using dplyr
 
 } 
+
+km<-for_models[[1]]
 
 ###############################################################################################
 ######## NOW  SET THINGS UP TO RUN MODEL #####################################################
@@ -122,25 +125,25 @@ all_LG_models<-map(for_models,run_model) # running model for all LG
 get_sol_focal_LG<-function(model_output){
 
 fixed_eff_table<-as.data.frame(summary(model_output,coef=TRUE)$coef.fixed)
-focal_LG_solution<-fixed_eff_table[6,"solution"] # effect size is the 6th row down in the solutions column 
+focal_LG_solution<-fixed_eff_table[6,"solution"] # effect size is the 6th row down in the solutions column
 focal_LG_solution
 }
 
-effect_sizes<-as.data.frame(map(all_LG_models, get_sol_focal_LG)%>% #getting the effect size for each LG and making table
-  unlist())%>%
-  tibble::rownames_to_column()%>%
-  setNames(c("CHR","effect_size"))
-
-
-size_v_length<-join(effect_sizes,deersum)%>%select(-"Max_EstMb")
-
-library(ggplot2)
-ggplot(size_v_length, aes(x=chr_length_KB,y=effect_size_of_LG))+
-  geom_point()+
-  theme_classic()+
-  geom_text(label=size_v_length$CHR, vjust=1.25)+
-  geom_smooth(method=lm)
-  
+ effect_sizes<-as.data.frame(map(all_LG_models, get_sol_focal_LG)%>% #getting the effect size for each LG and making table
+   unlist())%>%
+   tibble::rownames_to_column()%>%
+   setNames(c("CHR","effect_size"))
+# 
+# 
+# size_v_length<-join(effect_sizes,deersum)%>%select(-"Max_EstMb")
+# 
+# library(ggplot2)
+# ggplot(size_v_length, aes(x=chr_length_KB,y=effect_size_of_LG))+
+#   geom_point()+
+#   theme_classic()+
+#   geom_text(label=size_v_length$CHR, vjust=1.25)+
+#   geom_smooth(method=lm)
+#   
 
 ### pulling out standard deviations ####
 
@@ -163,7 +166,7 @@ SE<-as.data.frame(map(all_LG_models, get_SE_focal_LG)%>%
 effect_SE<-effect_sizes%>%join(SE)%>% 
   mutate(upper_CI=effect_size+(2*SE))%>%mutate(lower_CI=effect_size-(2*SE))#%>%order(effect_SE$chr_length_KB)
 
-effect_SE$overlap_zero<-ifelse(effect_SE$CHR %in% c("1","10","12","14","18","19","22","26","30", "24","25"),"Yes","No")
+effect_SE$overlap_zero<-ifelse(effect_SE$CHR %in% c("24","23","12"),"Yes","No")
 
 
 #effect_SE$CHR<-as.factor(effect_SE$CHR)

@@ -26,11 +26,11 @@ for (k in 1:33){
   
   Hap_div_chr <- list()
   
-  for (i in seq(from = 1, to = ncol(phased), by = 10)) {
-    until <- ifelse((i+19) > ncol(phased),  ncol(phased), i+19) #40 SNP windows 
+  for (i in seq(from = 1, to = ncol(phased), by = 15)) {
+    until <- ifelse((i+29) > ncol(phased),  ncol(phased), i+29) #40 SNP windows 
     if(until==i){break} #if window is only 1 snp long 
     window_temp <- phased[, c(i:(until))]
-    if (ncol(window_temp)<20){break}
+    if (ncol(window_temp)<30){break}
     window_unite <- window_temp %>% 
       unite("string_haplo", na.rm = TRUE, remove = FALSE) %>% 
       filter_all(all_vars(!grepl("9", .)))%>% #removing the non-called 9s
@@ -55,11 +55,12 @@ for (k in 1:33){
 
   
   hap_div_df$HRiD_focal=NA
-  for (col in 2:nrow(hap_div_df)){
-
+  for (col in 3:nrow(hap_div_df)){
+    
+    D_minus_2=as.numeric(hap_div_df[col-2,1])
     D_minus_1=as.numeric(hap_div_df[col-1,1])
-    D_plus_1=as.numeric(hap_div_df[col+1,1])
-    hap_div_df$HRiD_focal[col]=(D_minus_1+D_plus_1)/(2*as.numeric(hap_div_df[col,1]))
+    #D_plus_1=as.numeric(hap_div_df[col+1,1])
+    hap_div_df$HRiD_focal[col]=(D_minus_1+D_minus_2)/(2*as.numeric(hap_div_df[col,1]))
           }
   
   
@@ -92,13 +93,13 @@ for (col in 2:nrow(full_HRiD_df)){
 
 setwd("H:/")
 
-#save(full_HRiD_df,HRiD, file = "PhD_4th_yr/Heredity_ROH_density_manuscript/HRiD/hap_div_drop_scan.RData")
+#save(full_HRiD_df,HRiD, file = "PhD_4th_yr/Heredity_ROH_density_manuscript/HRiD/hap_div_drop_scan_2behind_30wind_15inc.RData")
 
-#load("PhD_4th_yr/Heredity_ROH_density_manuscript/HRiD/hap_div_drop_scan.RData")
+load("PhD_4th_yr/Heredity_ROH_density_manuscript/HRiD/hap_div_drop_scan_2behind_40wind_20inc.RData")
 
 
 
-top=as.numeric(quantile(full_HRiD_df$HRiD_focal, c(0.998),na.rm = TRUE))
+top=as.numeric(quantile(full_HRiD_df$HRiD_focal, c(0.999),na.rm = TRUE))
 top #1.055362
 z_val=(top - mean_HRiD)/sd_HRiD
 p_va=pnorm(-(z_val))           # One-sided test 
@@ -120,19 +121,18 @@ ggplot(full_HRiD_df, aes(Order, LogPValue, col = as.factor(CHR%% 2), group=CHR))
   #geom_point()+
   theme_classic()+
   theme(legend.position = "none",
-        axis.title.x = element_blank(),
         plot.title = element_text(hjust = 0.5),
         axis.text.x = element_text(size = 8, vjust = 0.5),
         axis.text.y = element_text(size = 12, vjust = 0.5))+
   scale_x_continuous(expand = c(0, 0), label = axis.set$CHR, breaks = axis.set$center)+
-  labs(x="Chromosome",y="-Log(p-value)",title="Haplotype diversity drop")+
+  labs(x="Chromosome",y="-Log(p-value)",title="Haplotype diversity drop, focal -2, 30snp wind 15inc")+
   geom_hline(yintercept = log_p, linetype="dashed", color = "red") 
   
   
 
 
 
-chr_sub=full_HRiD_df%>%filter(CHR==15)
+chr_sub=full_HRiD_df%>%filter(CHR==28)
 
 ggplot(chr_sub, aes(window_number, haplotype_div)) +
   geom_line()+
@@ -142,7 +142,21 @@ ggplot(chr_sub, aes(window_number, haplotype_div)) +
 ggplot(full_HRiD_df, aes(window_number, haplotype_div)) +
   geom_line()+
   theme_bw()+
-  facet_wrap(~CHR, scales = "free_x")#+
+  facet_wrap(~CHR, scales = "free_x", ncol = 6)#+
   geom_rect(data = subset(full_HRiD_df,CHR==15), 
             alpha = 0.6, xmin = -Inf,xmax = Inf,
             ymin = -Inf,ymax = Inf) 
+  
+  
+  ggplot(full_HRiD_df, aes(Order, haplotype_div, col = as.factor(CHR%% 2), group=CHR)) +
+    scale_colour_manual(values = c("gray36", "gray77")) +
+    geom_line() +
+    theme_classic()+
+    theme(legend.position = "none",
+          plot.title = element_text(hjust = 0.5),
+          axis.text.x = element_text(size = 8, vjust = 0.5),
+          axis.text.y = element_text(size = 12, vjust = 0.5))+
+    scale_x_continuous(expand = c(0, 0), label = axis.set$CHR, breaks = axis.set$center)+
+    labs(x="Chromosome",y="Haplotype diversity")
+
+  

@@ -10,10 +10,6 @@ library(tibble)
 library(ggplot2)
 library(MasterBayes)
 
-###########################################################################
-### reading pedigree etc from database ####################################
-###########################################################################
-
 
 db<-"C:\\Users\\s1881212\\Documents\\Deer_database_08_2021\\RedDeer1.99.accdb" #open connection
 con<-odbcConnectAccess2007(db)
@@ -43,7 +39,7 @@ odbcClose(con)
 #######################
 
 #ids that die before Oct 1st in their first yr
-neo<-life
+neo<-life%>%mutate(mum_age_sq=mum_age^2)
 
 neo$neonatal_survival<-NA
 neo$neonatal_survival<-if_else(neo$DeathMonth<10 & neo$DeathYear==neo$BirthYear, 0, 1)
@@ -76,7 +72,7 @@ year$yearling_surv<-if_else(year$DeathYear==(year$BirthYear)+2 & year$DeathMonth
 juv<-year%>%filter(yearling_surv==1)%>%dplyr::select(-yearling_surv,-winter_surv,-neonatal_survival)## removing 864 ids that died before first yr
 juv$juvenile_surv<-1
 
-juv_all<-life%>%join(juv)%>%mutate_at(vars("juvenile_surv"),~replace_na(.,0))
+juv_all<-life%>%join(juv)%>%mutate_at(vars("juvenile_surv"),~replace_na(.,0))%>%mutate(mum_age_sq=mum_age^2)
 
 
 #set up df
@@ -93,22 +89,17 @@ KB_perLG<-FROH%>%dplyr::group_by(Code, CHR)%>%
   complete(Code, CHR, fill = list(KB_chr = 0)) #completes for all chromosomes 
 
 
-deermap <- read.table("PhD_3rdYR/Data_files/TableS1_CervusElaphus_Final_Linkage_Map.txt", header = T, stringsAsFactors = F)
-deersum <- deermap %>% 
-  dplyr::group_by(CEL.LG) %>%
-  dplyr::summarise(Max_EstMb = max(Estimated.Mb.Position))%>%
-  dplyr::mutate(chr_length_KB=Max_EstMb/1000)%>%
-  dplyr::rename(CHR=CEL.LG)
+deermap <- read.csv("PhD_3rdYR/Data_files/Genome_assembly_mCerEla1.1.csv", header = T, stringsAsFactors = F)%>%
+  dplyr::filter(!CHR %in% c("All","All_auto","X","unplaced"))
 
-
-froh_per_chr<-join(KB_perLG,deersum)%>% mutate(chr_froh=KB_chr/chr_length_KB)%>%
-  dplyr::select(-Max_EstMb)%>% reshape2::dcast(Code~CHR) %>% mutate(FROHsum = rowSums(.[2:34]))%>%mutate(FROH_sum_div=FROHsum/33)
+froh_per_chr<-join(KB_perLG,deermap)%>% mutate(chr_froh=KB_chr/length_Kb)%>%
+  dplyr::select(-length_Mb,-length)%>% reshape2::dcast(Code~CHR) %>% mutate(FROHsum = rowSums(.[2:34]))%>%mutate(FROH_sum_div=FROHsum/33)
 
 
 colnames(froh_per_chr) <- c("Code", paste0("FROH_chr", 1:33),"FROHsum","FROH_sum_div")
 
 FROH_full<-read.table("PhD_3rdYR/Data_files/ROH_output/ROH_search_UpdatedMb_01_2022.hom.indiv", header=T, stringsAsFactors = F)%>%
-  dplyr::select(IID,KB) %>% dplyr::rename(Code=IID)%>%mutate(FROH=KB/2495700)
+  dplyr::select(IID,KB) %>% dplyr::rename(Code=IID)%>%mutate(FROH=KB/2591865)
 
 #####################################################################################################################
 
@@ -144,47 +135,85 @@ ped_ordered$Sire <- as.factor(ped_ordered$Sire)
 Ainv<-inverseA(ped_ordered, nodes="ALL")$Ainv
 
 
-save(neonat_df,winter_df,year_df,juve_df,Ainv, file="PhD_3rdYR/Model_inputs/df_survival_forMCMCglmm.RData")
+#save(neonat_df,winter_df,year_df,juve_df,Ainv, file="PhD_3rdYR/Model_inputs/df_ALLsurvival_forMCMCglmm.RData")
 
-#####################################################################
-##### this will now all be done on ash server #####################
-###################################################################
-
-k<-10000
-prior<-list(R=list(V=1,nu=0.002),
-            G=list(G1=list(V=0.25,nu=0.002,aplha.mu=0,alpha.V=k),
-                   G1=list(V=1,nu=1,aplha.mu=0,alpha.V=k), ## multimemberhsip part
-                   G1=list(V=0.25,nu=0.002,aplha.mu=0,alpha.V=k),
-                   G1=list(V=0.25,nu=0.002,aplha.mu=0,alpha.V=k)))
+setwd("H:/")
+load(file="PhD_3rdYR/Model_inputs/df_ALLsurvival_forMCMCglmm.RData")
+#####################################################################################################################################
+# 
+k<-100
+prior<-list(R=list(V=1,fix=1),
+            G=list(G1=list(V=1,nu=1,aplha.mu=0,alpha.V=k), ## multimemberhsip part
+                   G1=list(V=1,nu=1,aplha.mu=0,alpha.V=k),
+                   G1=list(V=1,nu=1,aplha.mu=0,alpha.V=k)))
 
 #### RUNNING MULTI-MEMBERSHIP MODEL ####
-# changing FROH sum to FROH or FROH sum/33 is same really 
-model2<-MCMCglmm(yearling_surv~1 + Sex + MotherStatus + FROHsum + mum_age+(mum_age^2)+BirthWt, #need to fit sum chrFROH  as continuous covariate,
-                random= ~ Code +
+# changing FROH sum to FROH or FROH sum/33 is same really
+model3<-MCMCglmm(juvenile_surv~1 + Sex + MotherStatus + FROHsum + mum_age+mum_age_sq, #need to fit sum chrFROH  as continuous covariate,
+                random= ~ 
                   idv(FROH_chr1+FROH_chr2+FROH_chr3+FROH_chr4+FROH_chr5+FROH_chr6+FROH_chr7+FROH_chr8+
                         FROH_chr9+FROH_chr10+FROH_chr11+FROH_chr12+FROH_chr13+FROH_chr14+FROH_chr15+FROH_chr16+
                         FROH_chr17+FROH_chr18+FROH_chr19+FROH_chr20+FROH_chr21+FROH_chr22+FROH_chr23+FROH_chr24+
                         FROH_chr25+FROH_chr26+FROH_chr27+FROH_chr28+FROH_chr29+FROH_chr30+FROH_chr31+FROH_chr32+
                         FROH_chr33)+BirthYear +MumCode,
-                family="categorical",
-                data=year_df,
-                ginverse = list(Code=Ainv), # code is recognised as the pedigree 
+                family="threshold",
+                data=juve_df,
                 prior = prior,
-                pr=TRUE,#saves posterior dist for random effects i.e. what we want 
-                nitt=10000,burnin=1500, thin = 200)
+                pr=TRUE,#saves posterior dist for random effects i.e. what we want
+                nitt=150000,burnin=50000)##
 
-#save(model2, file="PhD_3rdYR/Model outputs/mm_survival_17.03.RData")
-
-summary(model2)
-#plot(model$Sol)
-
-plot(model2)
+save(model3, file="PhD_3rdYR/Model outputs/Juvenile_survival_0-2/mm_juvenile2.RData")
 
 
-names <- apply(model2$Sol,2,mean) %>% names ## gets names of all random variables 
-sols<-apply(model2$Sol,2,mean)#gets mean of all solutions i.e. the effect size of random effects 
-CI_upper<-apply(model2$Sol,2,quantile,probs = c(0.975)) #gets upper confidence interval for all solutions 
+#maybe try without birthwt?
+
+
+# 
+# setwd("H:/")
+load(file="PhD_3rdYR/Model outputs/Juvenile_survival_0-2/mm_juvenile2.RData")
+# 
+# 
+summary(model3)
+# #plot(model$Sol)
+
+plot(model3)
+#
+
+model<-model3
+
+names <- apply(model2$Sol,2,mean) %>% names ## gets names of all random variables
+sols<-apply(model2$Sol,2,mean)#gets mean of all solutions i.e. the effect size of random effects
+CI_upper<-apply(model2$Sol,2,quantile,probs = c(0.975)) #gets upper confidence interval for all solutions
 CI_lower<-apply(model2$Sol,2,quantile,probs = c(0.025)) #gets lower CI for all solutions
+
+Random_table<-tibble(sols,row.names=names)%>%add_column(CI_upper)%>%add_column(CI_lower)
+
+names(Random_table)[1]<-"solution"
+names(Random_table)[2]<-"model_variable"
+
+FROH_sols<-Random_table%>%filter(model_variable %like% "FROH_c")%>% add_column(CHR = 1:33) ##filtering all random variables for those including FROH
+
+FROH_sols$CHR<-as.factor(FROH_sols$CHR)
+#
+ggplot(data=FROH_sols, aes(x=CHR, y=solution, ymin=CI_lower, ymax=CI_upper)) +
+  geom_pointrange() + #plots lines based on Y and lower and upper CI
+  geom_hline(yintercept=0, lty=2) +  # add a dotted line at x=1 after flip
+  coord_flip() +  # flip coordinates (puts labels on y axis)
+  labs(x="Chromosome", y="solution + CI", title = "Effect of Chr FROH on juvenile survival (no ped, no BthWt)") +
+  theme_bw()+  # use a white background
+  theme(legend.position = "none")
+
+###################################################################################################################
+###################################################################################################################
+
+
+sols_full<-as.data.frame(model$Sol)%>%dplyr::select(matches("FROH"))%>% ## taking out sols with FROH included
+  dplyr::mutate(across(2:34, ~.x + FROHsum)) ## adding FROHsum to chrFROH values
+
+names <- apply(sols_full,2,mean) %>% names ## gets names of all random variables, 2 = all down row
+sols<-apply(sols_full,2,mean)#gets mean of all solutions i.e. the effect size of random effects 
+CI_upper<-apply(sols_full,2,quantile,probs = c(0.95)) #gets upper confidence interval for all solutions 
+CI_lower<-apply(sols_full,2,quantile,probs = c(0.05)) #gets lower CI for all solutions
 
 Random_table<-tibble(sols,row.names=names)%>%add_column(CI_upper)%>%add_column(CI_lower)
 
@@ -196,26 +225,30 @@ FROH_sols<-Random_table%>%filter(model_variable %like% "FROH_c")%>% add_column(C
 FROH_sols$CHR<-as.factor(FROH_sols$CHR)
 
 ggplot(data=FROH_sols, aes(x=CHR, y=solution, ymin=CI_lower, ymax=CI_upper)) +
-  geom_pointrange() + #plots lines based on Y and lower and upper CI
-  geom_hline(yintercept=0, lty=2) +  # add a dotted line at x=1 after flip
+  geom_pointrange(colour="grey50") + #plots lines based on Y and lower and upper CI
+  geom_hline(yintercept=0, lty=2) +  # black line is 0
+  geom_hline(yintercept=-0.216671, lty=1,colour="red") + ## red line is the average effect of all chromosomes 
   coord_flip() +  # flip coordinates (puts labels on y axis)
-  labs(x="Linkage group", y="solution + CI", title = "Effect size of Linkage group FROH on Birthweight (kg)") +
+  labs(x="Chromosome", y="solution + CI", title = "Effect size of chromosome FROH on survival") +
   theme_bw()+  # use a white background                 
   theme(legend.position = "none")
 
-#### saving plot in wd
-ggsave(file="test_gg.png",
-       plot = ggplot( data=FROH_sols, aes(x=CHR, y=solution, ymin=CI_lower, ymax=CI_upper)) +
-  geom_pointrange() + #plots lines based on Y and lower and upper CI
-  geom_hline(yintercept=0, lty=2) +  # add a dotted line at x=1 after flip
-  coord_flip() +  # flip coordinates (puts labels on y axis)
-  labs(x="Linkage group", y="solution + CI", title = "Effect size of Linkage group FROH on Birthweight (kg)") +
-  theme_bw()+  # use a white background                 
-  theme(legend.position = "none"))
 
-  
-  
-  
+sum(FROH_sols$solution)
+
+#### saving plot in wd
+# ggsave(file="test_gg.png",
+#        plot = ggplot( data=FROH_sols, aes(x=CHR, y=solution, ymin=CI_lower, ymax=CI_upper)) +
+#   geom_pointrange() + #plots lines based on Y and lower and upper CI
+#   geom_hline(yintercept=0, lty=2) +  # add a dotted line at x=1 after flip
+#   coord_flip() +  # flip coordinates (puts labels on y axis)
+#   labs(x="Linkage group", y="solution + CI", title = "Effect size of Linkage group FROH on Birthweight (kg)") +
+#   theme_bw()+  # use a white background
+#   theme(legend.position = "none"))
+#
+#
+#
+
   
 
 
@@ -223,32 +256,32 @@ ggsave(file="test_gg.png",
 
 
 ### saving trace plots 
-library(lattice)
-
-xyplot(
-  as.mcmc(model2$VCV),  ## convert matrix to `mcmc` object
-  layout=c(2,1)            ## customize panel arrangement
-)
-
-## help from https://bbolker.github.io/morelia_2018/notes/bayeslab.html
-## variance components 
-jpeg(file="test2.jpeg")
-xyplot(
-  as.mcmc(model2$VCV)  ## convert matrix to `mcmc` object
-)
-dev.off()
-
-#fixed effects plots 
-jpeg(file="test3.jpeg")
-xyplot(
-  as.mcmc((model2$Sol)[,c(1:4)])  ## convert matrix to `mcmc` object
-  ## customize panel arrangement
-)
-dev.off()
-
-jpeg(file="test4.jpeg")
-xyplot(
-  as.mcmc((model2$Sol)[,c(5:7)])  ## convert matrix to `mcmc` object
-  ## customize panel arrangement
-)
-dev.off()
+# library(lattice)
+# 
+# xyplot(
+#   as.mcmc(model2$VCV),  ## convert matrix to `mcmc` object
+#   layout=c(2,1)            ## customize panel arrangement
+# )
+# 
+# ## help from https://bbolker.github.io/morelia_2018/notes/bayeslab.html
+# ## variance components 
+# jpeg(file="test2.jpeg")
+# xyplot(
+#   as.mcmc(model2$VCV)  ## convert matrix to `mcmc` object
+# )
+# dev.off()
+# 
+# #fixed effects plots 
+# jpeg(file="test3.jpeg")
+# xyplot(
+#   as.mcmc((model2$Sol)[,c(1:4)])  ## convert matrix to `mcmc` object
+#   ## customize panel arrangement
+# )
+# dev.off()
+# 
+# jpeg(file="test4.jpeg")
+# xyplot(
+#   as.mcmc((model2$Sol)[,c(5:7)])  ## convert matrix to `mcmc` object
+#   ## customize panel arrangement
+# )
+# dev.off()

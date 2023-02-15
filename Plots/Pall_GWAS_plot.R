@@ -28,7 +28,7 @@ CM_g<-ggplot(CMpall, aes(Order, perc, col = as.factor(CHR%% 2), group=CHR)) +
   scale_colour_manual(values = c("coral", "cornflowerblue")) +
   geom_point() +
   theme_classic()+
-  labs(x="Chromosome",y="ROH density \n(% of ids with a ROH)", title="Using genetic map (cM) positions")+
+  labs(x="Chromosome",y="ROH density \n(% of ids with a ROH)", title="Genetic map (cM) positions")+
   theme(legend.position = "none",
         plot.title = element_text(hjust = 0.5),
         axis.text.x = element_text(size = 8, vjust = 0.5),
@@ -78,7 +78,7 @@ BP_g<-ggplot(BPpall, aes(Order, perc, col = as.factor(CHR%% 2), group=CHR)) +
   scale_colour_manual(values = c("coral", "cornflowerblue")) +
   geom_point() +
   theme_classic()+
-  labs(y="ROH density \n(%of ids with a ROH)", title = "Using physical map (bp) positions")+
+  labs(y="ROH density \n(%of ids with a ROH)", title = "Physical map (bp) positions")+
   theme(legend.position = "none",
         axis.title.x = element_blank(),
         plot.title = element_text(hjust = 0.5),

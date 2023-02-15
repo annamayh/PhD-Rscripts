@@ -39,7 +39,7 @@ setwd("H:/")
 all_sims_hap_div_strong_sel=list()
 
 
-for (sim_num in 1:25){
+for (sim_num in 1:23){
   
 
     thinned_snps=read.table(paste0("PhD_4th_yr/Heredity_ROH_density_manuscript/hap_div_sims/Rum_strong_sel_thinned/ROH_scan_sim_thinned",sim_num,".hom.summary"), header=T, stringsAsFactors = F)%>%
@@ -65,10 +65,10 @@ for (sim_num in 1:25){
     Haplotype_diversity <- list()
     
     for (i in seq(from = 1, to = ncol(phased_lab), by = 10)) {
-          until <- ifelse((i+9) > ncol(phased_lab),  ncol(phased_lab), i+9) #10 SNP windows 
+          until <- ifelse((i+19) > ncol(phased_lab),  ncol(phased_lab), i+19) #10 SNP windows 
           if(until==i){break} #if window is only 1 snp long 
           window_temp <- phased_lab[, c(i:(until))]
-          if (ncol(window_temp)<10){break}
+          if (ncol(window_temp)<20){break}
           window_unite <- window_temp %>% 
             unite("string_haplo", na.rm = TRUE, remove = FALSE) %>% 
             group_by(string_haplo)%>% #grouping by unique haplotype
@@ -146,8 +146,9 @@ for (sim_num in 1:25){
     select(-V1,-V3,-V4, -V5, -V6, -V7, -V8, -V9)##removing other random columns you get from vcf files
   
   names(sim)[1]="BP"
-  
+  #filtering snps
   sims_sub=inner_join(thinned_snps,sim)%>%na.omit()%>%mutate(BP = ifelse(duplicated(BP), paste0(BP,"_2"),BP))
+  
   
   sims_snps=sims_sub%>%
     t()%>%as_tibble()  ##trnaspose so SNPs are columns and IDs are rows
@@ -161,10 +162,10 @@ for (sim_num in 1:25){
   Haplotype_diversity <- list()
   
   for (i in seq(from = 1, to = ncol(phased_lab), by = 10)) {
-    until <- ifelse((i+9) > ncol(phased_lab),  ncol(phased_lab), i+9) #10 SNP windows 
+    until <- ifelse((i+19) > ncol(phased_lab),  ncol(phased_lab), i+19) #10 SNP windows 
     if(until==i){break} #if window is only 1 snp long 
     window_temp <- phased_lab[, c(i:(until))]
-    if (ncol(window_temp)<10){break}
+    if (ncol(window_temp)<20){break}
     window_unite <- window_temp %>% 
       unite("string_haplo", na.rm = TRUE, remove = FALSE) %>% 
       group_by(string_haplo)%>% #grouping by unique haplotype
@@ -222,6 +223,9 @@ for (sim_num in 1:25){
 
 
 
+
+
+#load(file="PhD_4th_yr/Heredity_ROH_density_manuscript/hap_div_sims/hap_div.RData")
 ############################################################################################################################
 ########## plot ############################################################################################################
 ########################################################################################
@@ -231,36 +235,120 @@ library(wesanderson)
 
 all_sims_unlisted_sel=bind_rows(all_sims_hap_div_strong_sel, .id = "simulation_num")
 
+all_sims_unlisted_sel$simulation_num=as.numeric(all_sims_unlisted_sel$simulation_num)
 
-B=ggplot(all_sims_unlisted_sel, aes(hotspot, D, fill=hotspot)) + geom_boxplot()+
-  theme_classic()+
-  scale_x_discrete(labels = c("Remainder of genome","ROH Hotspots" ))+
-  theme(legend.position = "none", 
-        axis.title.x=element_blank())+
-  ylab("Window haplotype diversity")+
-  labs(title = "Strong selection simulation")+
-  scale_fill_brewer(palette="Dark2")+
-  ylim(0.2,1)+
-    geom_point(aes(x = hotspot, y = D, fill=factor(hotspot)), position = "jitter", alpha = 0.05)
 
+# B=ggplot(all_sims_unlisted_sel, aes(hotspot, D, fill=hotspot)) + geom_boxplot()+
+#   theme_classic()+
+#   scale_x_discrete(labels = c("Remainder of genome","ROH Hotspots" ))+
+#   theme(legend.position = "none", 
+#         axis.title.x=element_blank())+
+#   ylab("Window haplotype diversity")+
+#   labs(title = "Strong selection simulation")+
+#   scale_fill_brewer(palette="Dark2")+
+#   ylim(0.2,1)+
+#     geom_point(aes(x = hotspot, y = D, fill=factor(hotspot)), position = "jitter", alpha = 0.05)
+
+
+ggplot(all_sims_unlisted_sel, aes(window_number, D)) +
+  geom_line()+
+  theme_bw()+
+  facet_wrap(~simulation_num)+
+  ylim(0.6,1)+
+  labs(x = "Window", y="Haplotype diversity")+
+  geom_rect(data = data.frame(simulation_num = 1), aes(xmin = 19, xmax = 25, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 2), aes(xmin = 127, xmax = 131, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 3), aes(xmin = 85, xmax = 88, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 4), aes(xmin = 42, xmax = 46, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 5), aes(xmin = 71, xmax = 73, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 6), aes(xmin = 5, xmax = 9, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 6), aes(xmin = 38, xmax = 40, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  
+  geom_rect(data = data.frame(simulation_num = 7), aes(xmin = 22, xmax = 26, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 8), aes(xmin = 112, xmax = 114, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 9), aes(xmin = 123, xmax = 127, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 10), aes(xmin = 134, xmax = 137, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 11), aes(xmin = 42, xmax = 43, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 12), aes(xmin = 118, xmax = 120, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 12), aes(xmin = 87, xmax = 88, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  
+  geom_rect(data = data.frame(simulation_num = 13), aes(xmin = 142, xmax = 144, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 14), aes(xmin = 46, xmax = 49, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 15), aes(xmin = 125, xmax = 129, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 16), aes(xmin = 110, xmax = 115, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 17), aes(xmin = 94, xmax = 99, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 18), aes(xmin = 73, xmax = 78, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 19), aes(xmin = 153, xmax = 158, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 20), aes(xmin = 89, xmax = 93, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 21), aes(xmin = 158, xmax = 161, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 22), aes(xmin = 110, xmax = 113, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 23), aes(xmin = 106, xmax = 109, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)
+  #geom_rect(data = data.frame(simulation_num = 24), aes(xmin = 82, xmax = 88, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  #geom_rect(data = data.frame(simulation_num = 25), aes(xmin = 9, xmax = 11, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  #geom_rect(data = data.frame(simulation_num = 25), aes(xmin = 136, xmax = 137, ymin = 0.6, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)
+  
 
 
 #####
-all_sims_unlisted_neu=all_sims_hap_div_neutral[-c(7,15)]
+
 
 all_sims_unlisted_neu=bind_rows(all_sims_hap_div_neutral, .id = "simulation_num")
 
+all_sims_unlisted_neu$simulation_num=as.numeric(all_sims_unlisted_neu$simulation_num)
 
-A=ggplot(all_sims_unlisted_neu, aes(hotspot, D, fill=hotspot)) + geom_boxplot()+
-  theme_classic()+
-  scale_x_discrete(labels = c("Remainder of genome","ROH Hotspots" ))+
-   theme(legend.position = "none", 
-        axis.title.x=element_blank())+
-  ylab("Window haplotype diversity")+
-  labs(title = "Neutral simulation")+
-    scale_fill_brewer(palette="Dark2")+
-  ylim(0.2,1)+
-  geom_point(aes(x = hotspot, y = D, fill=factor(hotspot)), position = "jitter", alpha = 0.05)
+
+# A=ggplot(all_sims_unlisted_neu, aes(hotspot, D, fill=hotspot)) + geom_boxplot()+
+#   theme_classic()+
+#   scale_x_discrete(labels = c("Remainder of genome","ROH Hotspots" ))+
+#    theme(legend.position = "none", 
+#         axis.title.x=element_blank())+
+#   ylab("Window haplotype diversity")+
+#   labs(title = "Neutral simulation")+
+#     scale_fill_brewer(palette="Dark2")+
+#   ylim(0.2,1)+
+#   geom_point(aes(x = hotspot, y = D, fill=factor(hotspot)), position = "jitter", alpha = 0.05)
+
+
+ggplot(all_sims_unlisted_neu, aes(window_number, D)) +
+  geom_line()+
+  theme_bw()+
+  facet_wrap(~simulation_num)+
+     ylim(0.6,1)+
+  labs(x = "Window", y="Haplotype diversity")+
+geom_rect(data = data.frame(simulation_num = 1), aes(xmin = 32, xmax = 35, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 2), aes(xmin = 137, xmax = 139, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 3), aes(xmin = 81, xmax = 86, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 4), aes(xmin = 60, xmax = 69, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 5), aes(xmin = 30, xmax = 40, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+  geom_rect(data = data.frame(simulation_num = 5), aes(xmin = 156, xmax = 161, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+geom_rect(data = data.frame(simulation_num = 6), aes(xmin = 131, xmax = 133, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+geom_rect(data = data.frame(simulation_num = 7), aes(xmin = 10, xmax = 12, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+geom_rect(data = data.frame(simulation_num = 8), aes(xmin = 102, xmax = 105, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+geom_rect(data = data.frame(simulation_num = 8), aes(xmin = 135, xmax = 137, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+
+geom_rect(data = data.frame(simulation_num = 9), aes(xmin = 120, xmax = 124, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+geom_rect(data = data.frame(simulation_num = 10), aes(xmin = 81, xmax = 84, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+geom_rect(data = data.frame(simulation_num = 10), aes(xmin = 105, xmax = 112, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+
+geom_rect(data = data.frame(simulation_num = 11), aes(xmin = 41, xmax = 43, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+geom_rect(data = data.frame(simulation_num = 12), aes(xmin = 20, xmax = 25, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+geom_rect(data = data.frame(simulation_num = 12), aes(xmin = 45, xmax = 49, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+
+geom_rect(data = data.frame(simulation_num = 13), aes(xmin = 79, xmax = 82, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+geom_rect(data = data.frame(simulation_num = 14), aes(xmin = 5, xmax = 7, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+geom_rect(data = data.frame(simulation_num = 15), aes(xmin = 28, xmax = 32, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+geom_rect(data = data.frame(simulation_num = 15), aes(xmin = 78, xmax = 80, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+
+geom_rect(data = data.frame(simulation_num = 16), aes(xmin = 141, xmax = 142, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+geom_rect(data = data.frame(simulation_num = 17), aes(xmin = 8, xmax = 12, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+geom_rect(data = data.frame(simulation_num = 18), aes(xmin = 125, xmax = 132, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+geom_rect(data = data.frame(simulation_num = 19), aes(xmin = 42, xmax = 44, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+geom_rect(data = data.frame(simulation_num = 20), aes(xmin = 131, xmax = 134, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+geom_rect(data = data.frame(simulation_num = 21), aes(xmin = 13, xmax = 19, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+geom_rect(data = data.frame(simulation_num = 22), aes(xmin = 20, xmax = 22, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)+
+geom_rect(data = data.frame(simulation_num = 23), aes(xmin = 101, xmax = 104, ymin = 0.7, ymax = Inf), alpha = 0.2, fill="blue", inherit.aes = FALSE)
+
+
 
 
 library(patchwork)
