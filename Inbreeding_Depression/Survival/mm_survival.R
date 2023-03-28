@@ -20,10 +20,12 @@ birth_wt<-sqlFetch(con, "sys_BirthWt")%>%dplyr::select(BirthWt,Code)
 
 life<-sqlFetch(con, "tbllife") %>% 
   dplyr::select(Code, BirthDay,BirthYear, BirthMonth, BirthYear,DeathDay,DeathMonth,DeathYear, Sex, MumCode, DeathType)%>%
-  filter(DeathType!= c("S","A","D"))%>%
-  drop_na(BirthYear,DeathYear,DeathMonth,BirthMonth)%>%
-  join(mum_birthyr)%>%mutate(mum_age=BirthYear-mum_birthyear)%>%
-  join(mum_stat)%>%join(birth_wt)
+  # filter(DeathType!= ("S"))%>%
+  # filter(DeathType!= ("A"))%>%
+  # filter(DeathType!= ("D"))%>%
+    drop_na(BirthYear,DeathYear,DeathMonth,BirthMonth)%>%
+  plyr::join(mum_birthyr)%>%mutate(mum_age=BirthYear-mum_birthyear)%>%
+  plyr::join(mum_stat)%>%plyr::join(birth_wt)
 
 ped<-sqlFetch(con, "sys_Pedigree")%>%dplyr::select(Code, MumCode,Sire)
 
@@ -72,7 +74,7 @@ year$yearling_surv<-if_else(year$DeathYear==(year$BirthYear)+2 & year$DeathMonth
 juv<-year%>%filter(yearling_surv==1)%>%dplyr::select(-yearling_surv,-winter_surv,-neonatal_survival)## removing 864 ids that died before first yr
 juv$juvenile_surv<-1
 
-juv_all<-life%>%join(juv)%>%mutate_at(vars("juvenile_surv"),~replace_na(.,0))%>%mutate(mum_age_sq=mum_age^2)
+juv_all<-life%>%plyr::join(juv)%>%mutate_at(vars("juvenile_surv"),~replace_na(.,0))%>%mutate(mum_age_sq=mum_age^2)
 
 
 #set up df
@@ -92,7 +94,7 @@ KB_perLG<-FROH%>%dplyr::group_by(Code, CHR)%>%
 deermap <- read.csv("PhD_3rdYR/Data_files/Genome_assembly_mCerEla1.1.csv", header = T, stringsAsFactors = F)%>%
   dplyr::filter(!CHR %in% c("All","All_auto","X","unplaced"))
 
-froh_per_chr<-join(KB_perLG,deermap)%>% mutate(chr_froh=KB_chr/length_Kb)%>%
+froh_per_chr<-plyr::join(KB_perLG,deermap)%>% mutate(chr_froh=KB_chr/length_Kb)%>%
   dplyr::select(-length_Mb,-length)%>% reshape2::dcast(Code~CHR) %>% mutate(FROHsum = rowSums(.[2:34]))%>%mutate(FROH_sum_div=FROHsum/33)
 
 
@@ -119,8 +121,8 @@ year_df<-year%>%join(froh_per_chr)%>%
   join(FROH_full)%>%dplyr::select(-BirthDay,-DeathDay,-DeathMonth,-BirthMonth)%>%na.omit()
 
 #juvenile survival
-juve_df<-juv_all%>%join(froh_per_chr)%>%
-  join(FROH_full)%>%dplyr::select(-BirthDay,-DeathDay,-DeathMonth,-BirthMonth)%>%na.omit()
+juve_df<-juv_all%>%plyr::join(froh_per_chr)%>%
+  plyr::join(FROH_full)%>%dplyr::select(-BirthDay,-DeathDay,-DeathMonth,-BirthMonth, -BirthWt)%>%na.omit()
 
 
 
@@ -160,7 +162,7 @@ model3<-MCMCglmm(juvenile_surv~1 + Sex + MotherStatus + FROHsum + mum_age+mum_ag
                 data=juve_df,
                 prior = prior,
                 pr=TRUE,#saves posterior dist for random effects i.e. what we want
-                nitt=150000,burnin=50000)##
+                nitt=50000,burnin=1000)##
 
 save(model3, file="PhD_3rdYR/Model outputs/Juvenile_survival_0-2/mm_juvenile2.RData")
 
@@ -207,7 +209,7 @@ ggplot(data=FROH_sols, aes(x=CHR, y=solution, ymin=CI_lower, ymax=CI_upper)) +
 ###################################################################################################################
 
 
-sols_full<-as.data.frame(model$Sol)%>%dplyr::select(matches("FROH"))%>% ## taking out sols with FROH included
+sols_full<-as.data.frame(model3$Sol)%>%dplyr::select(matches("FROH"))%>% ## taking out sols with FROH included
   dplyr::mutate(across(2:34, ~.x + FROHsum)) ## adding FROHsum to chrFROH values
 
 names <- apply(sols_full,2,mean) %>% names ## gets names of all random variables, 2 = all down row

@@ -76,6 +76,7 @@ male_LBS_model=MCMCglmm(LBS~ trait+trait:FROH-1,
 
 
 plot(male_LBS_model)
+
 summary(male_LBS_model)
 
 
@@ -119,4 +120,33 @@ summary(male_LBS_model)
 
 # traithu_LBS:FROH   10.1794   1.9981  19.1477    970.5 0.0156 *  
   
+
+## check for overdispersion instead of zi
+hist(male_LBS_df$LBS, breaks = 100)
+
+ppois(0, mean(male_LBS_df$LBS))## would expect 25% of data would be 0s if poisson 
+
+table(male_LBS_df$LBS == 0)
+
+##fitting simple model to generate 0s back
+prior.m5d.2 = list(R = list(V = diag(1), nu = 0.002))
+m5d.2 <- MCMCglmm(LBS ~ FROH, 
+                  #random=~MumCode+BirthYear, 
+                  prior = prior.m5d.2,
+                  data= male_LBS_df,
+                   family = "poisson", saveX = TRUE, verbose = FALSE)
+
+nz <- 1:1000
+oz <- sum(male_LBS_df$LBS == 0)
+
+for (i in 1:1000) {
+  pred.l <- rnorm(915, (m5d.2$X %*% m5d.2$Sol[i,])@x, sqrt(m5d.2$VCV[i]))
+  nz[i] <- sum(rpois(915, exp(pred.l)) == 0)}
+
+
+hist(nz)
+lines(x = oz, col = "red")
+
+
+
 

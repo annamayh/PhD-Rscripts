@@ -244,11 +244,18 @@ pall_nobtl_r$Pop_History<-"No bottleneck"
 
 plot_pall<-rbind(pall_neutral,pall_sel_recomb,pall_sel_s0.05,pall_recomb,
                  pall_bottleneck,pall_bottleneck_s_r,pall_bottleneck_s0.05_r,pall_bottleneck_r,
-                 pall_nobtl,pall_nobtl_s_r,pall_nobtl_s0.05_r,pall_nobtl_r)
+                 pall_nobtl,pall_nobtl_s_r,pall_nobtl_s0.05_r,pall_nobtl_r)%>%
+  filter(simulation_num!=23)%>%
+  filter(simulation_num!=24)%>%
+  filter(simulation_num!=25)%>%
+  filter(simulation_num!=26)%>%
+  filter(simulation_num!=27)%>%
+  filter(simulation_num!=28)
+  
 
 plot_pall<-plot_pall%>%mutate(Top1_perc=Top_1*100)
 
-no_bottle<-rbind(pall_nobtl,pall_nobtl_s_r,pall_nobtl_s0.05_r,pall_nobtl_r)
+no_bottle<-rbind(pall_nobtl,pall_nobtl_s_r,pall_nobtl_s0.05_r,pall_nobtl_r)%>%mutate(Top1_perc=Top_1*100)
 
 ## This function allows us to specify which facet to annotate
 ## This function allows us to specify which facet to annotate
@@ -262,7 +269,7 @@ annotation_custom2 <- function (grob, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax
 }
 
 ###################################################################################################################################
-notbl_inset<-no_bottle%>%mutate(Top1_perc=Top_1*100)%>%
+notbl_inset<-no_bottle%>%#mutate(Top1_perc=Top_1*100)%>%
   mutate(Model = fct_relevel(Model, "Neutral","Varied\nrecombination","Varied\nrecombination\n+ selection","Varied\nrecombination\n+strong\nselection"))%>%
   ggplot(aes(x=Model, y=Top1_perc, fill=Model))+
   geom_violin(position="dodge", alpha=0.5)+
@@ -286,13 +293,13 @@ top_ann_text <- data.frame(Model = "Varied\nrecombination",Top1_perc = 17,lab = 
 
 
 ## plotting top 1%
-Top_1<-plot_pall%>%mutate(Top1_perc=Top_1*100)%>%
+Top_1<-plot_pall%>%#mutate(Top1_perc=Top_1*100)%>%
   mutate(Model = fct_relevel(Model, "Neutral","Varied\nrecombination","Varied\nrecombination\n+ selection","Varied\nrecombination\n+strong\nselection"))%>%
   mutate(Pop_History = fct_relevel(Pop_History,"No bottleneck","Rum","Severe bottleneck"))%>%
   ggplot(aes(x=Model, y=Top1_perc, fill=Model))+
   geom_violin(position="dodge", alpha=0.5)+
   theme_bw()+
-  scale_fill_manual(values = wes_palette("Darjeeling1", n=5))+
+  scale_fill_manual(values = wes_palette("Darjeeling1", n=4))+
   xlab("Simulation Model")+
   ylab("ROH hotspot threshold per simulation\n(99th percentile ROH density)")+
   labs(tag = "A")+
@@ -306,7 +313,7 @@ Top_1<-plot_pall%>%mutate(Top1_perc=Top_1*100)%>%
   stat_summary(fun=mean, geom="point",size=2)+ # adds the mean dot 
   geom_hline(yintercept = 14.9, linetype=4, color = "black", size = 1)+
   geom_text(data = top_ann_text,label = "Rum actual value")+
-  annotation_custom2(grob=ggplot2::ggplotGrob(notbl_inset),
+  annotation_custom2(ggplotGrob(notbl_inset),
                     data=data.frame(Pop_History="No bottleneck", Model="Neutral"),
                     ymin=30, ymax=80, xmin=-Inf, xmax=Inf)
  # gg_inset(ggplot2::ggplotGrob(notbl_inset), data = data.frame(Pop_History = "No bottleneck"),Model = "Varied\nrecombination",
