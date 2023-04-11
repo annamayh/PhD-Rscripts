@@ -8,12 +8,12 @@ db<-"C:\\Users\\s1881212\\Documents\\Deer_database_2022/RedDeer2.05.accdb" #open
 con<-odbcConnectAccess2007(db)
 
 mum_birthyr<-sqlFetch(con, "tbllife")%>%dplyr::select(Code,BirthYear)%>%dplyr::rename(mum_birthyear=BirthYear,MumCode=Code)
-mum_stat<-sqlFetch(con, "sys_HindStatusAtConception") %>% dplyr::select(-CalfBirthYear)%>%dplyr::rename(MumCode=Mum, Code=Calf)
+mum_stat<-sqlFetch(con, "sys_HindStatusAtConception") 
+mum_stat=mum_stat%>%dplyr::select(-CalfBirthYear)%>%dplyr::rename(MumCode=Mum, Code=Calf)
 birth_wt<-sqlFetch(con, "sys_BirthWt")%>%dplyr::select(BirthWt,Code)
 
 life<-sqlFetch(con, "tbllife") %>% 
-  dplyr::select(Code, BirthDay,BirthMonth, BirthYear,DeathDay,DeathMonth,DeathYear, Sex, MumCode, DeathType)%>%
-  filter(DeathType!= c("S","A","D"))#%>%
+  dplyr::select(Code, BirthDay,BirthMonth, BirthYear,DeathDay,DeathMonth,DeathYear, Sex, MumCode, DeathType)
   # drop_na(BirthYear,DeathYear,DeathMonth,BirthMonth)%>%
   # join(mum_birthyr)%>%mutate(mum_age=BirthYear-mum_birthyear)%>%
   # join(mum_stat)%>%join(birth_wt)
@@ -34,29 +34,38 @@ odbcClose(con)
 year=life
 
 census_sep=cen%>%separate(LastSeen,into=c("YearLast","MonthLast","DayLast"),sep="-")%>%
-  select(Code, YearLast)
+  dplyr::select(Code, YearLast)
 
 census_sep$YearLast=as.numeric(census_sep$YearLast)
-year_plus_census=year%>%full_join(census_sep)%>%
-  mutate(yrs_since_last_Seen=(2022-YearLast))
+year_plus_census=year%>%right_join(census_sep)%>%
+  mutate(yrs_since_last_Seen=(2023-YearLast))
 
+year_plus_census_check=year_plus_census%>%filter(is.na(DeathYear))%>%filter(!is.na(BirthYear))%>%
+  filter(BirthYear==YearLast)
 
 ## for all ids with missing death years fill in estimated death year when havent been seen for at least 3 yrs 
 year_plus_census_filt=year_plus_census%>%filter(is.na(DeathYear))%>%
-  filter(yrs_since_last_Seen>3)%>%
   mutate(DeathYear_est=YearLast+3)%>%
-  select(Code,DeathYear_est)
+  filter(yrs_since_last_Seen>1)%>% #has to be more than 3 yrs scince its been seen to have an estimated death
+  filter(DeathYear_est<2023)%>% 
+  dplyr::select(Code,DeathYear_est,YearLast)
 
-year_plus_est_death=year%>%left_join(year_plus_census_filt)
+year_plus_est_death=year%>%left_join(year_plus_census_filt) ##adding in an estimated death yr and year last seen for ids w/ no death year (not including ids born in the last 3 yrs )
 
 
 year_plus_est_death$DeathMonth=as.numeric(year_plus_est_death$DeathMonth)
 year_plus_est_death$DeathYear=as.numeric(year_plus_est_death$DeathYear)
 year_plus_est_death$DeathYear_est=as.numeric(year_plus_est_death$DeathYear_est)
 year_plus_est_death$BirthYear=as.numeric(year_plus_est_death$BirthYear)
+year_plus_est_death$YearLast=as.numeric(year_plus_est_death$YearLast)
+
+# year_plus_est_death_check=year_plus_est_death%>%filter(is.na(DeathYear))%>%filter(!is.na(BirthYear))%>%
+#   filter(BirthYear==YearLast)
 
 year_juve=year_plus_est_death%>%
   mutate(juvenile_survival = case_when(
+       ((is.na(DeathYear)) & (BirthYear==YearLast))~"0",
+
     ## when there is no recorded death year use the estimated death year (which is when id has not been seen for 3 years...)
     # not sure any juveniles will actually be recorded as 0 in this case as theyre killed off after 3 year anyway 
       (is.na(DeathYear) & (DeathYear_est<(BirthYear+2)))~"0",
@@ -66,7 +75,7 @@ year_juve=year_plus_est_death%>%
       (DeathYear==(BirthYear+1)) ~ "0", 
       #if died before May in the second year of life then did not survival to juvenile (cut off is May)
      (DeathYear==(BirthYear+2))&(DeathMonth<5) ~ "0", 
-      #any ids with no recorded death month and a death year 2 yrs after birth is given NA as we dont know if i died before or after 2nd birhday (only 5 ids)
+      #any ids with no recorded death month and a death year 2 yrs after birth is given NA as we dont know if id died before or after 2nd birhday (only 5 ids)
      (DeathYear==(BirthYear+2))&(is.na(DeathMonth)) ~ "NA", 
       
       ) )%>%
@@ -75,19 +84,37 @@ year_juve=year_plus_est_death%>%
   
   
 
+  # 
+  # testing=year_juve%>%mutate(DeathYear_all=coalesce(DeathYear,DeathYear_est))%>%
+  #   mutate(diff=DeathYear_all-BirthYear)%>%filter(diff>=2)
   
-  testing=year_juve%>%mutate(DeathYear_all=coalesce(DeathYear,DeathYear_est))%>%
-    mutate(diff=DeathYear_all-BirthYear)%>%filter(diff>=2)
+table(year_juve$DeathType)
+  
+  
+juvenile_surv=year_juve%>%filter(DeathType!= "S"| is.na(DeathType))%>% #filter out ids that were shot
+  filter(DeathType!= "A" | is.na(DeathType)) %>% #%>% ##filter out ids that were an accidental death
+  filter(DeathType!= "D" | is.na(DeathType))%>% ## keeping NA death type
+  dplyr::select(Code, BirthYear, Sex, MumCode, juvenile_survival)
 
-  
-juvenile_surv=year_juve%>%filter(DeathType!= "S")%>% #filter out ids that were shot
-  filter(DeathType!= "A")%>% ##filter out ids that were an accidental death
-  filter(DeathType!= "D")%>%
+table(juvenile_surv$juvenile_survival)
+
+# want to keep ids that were shot but also made it to adulthood 
+juvenile_surv_shot=year_juve%>%filter(DeathType== "S"&juvenile_survival=="1")%>%
   select(Code, BirthYear, Sex, MumCode, juvenile_survival)
 
+table(juvenile_survcheck$juvenile_survival)
 
+juvenile_surv=juvenile_surv%>%rbind(juvenile_surv_shot)
+table(juvenile_surv$juvenile_survival)
 
-## read in FROH values
+# 
+# juvenile_surv_shot_notsurv=year_juve%>%filter(DeathType== "S"&juvenile_survival=="0")%>%inner_join(FROH_full)
+# mean(juvenile_surv_shot_notsurv$FROH)
+# 
+# juvenile_surv_shot_notsurv=year_juve%>%filter(DeathType== "S"&juvenile_survival=="1")%>%inner_join(FROH_full)
+# mean(juvenile_surv_shot_notsurv$FROH)
+# 
+# ## read in FROH values
 
 setwd("H:/")
 
@@ -125,16 +152,20 @@ juvenile_surv_df=juvenile_surv%>%
 ##some NAs in mum stat and birth weight
 
 
-
+table(juvenile_surv_df$juvenile_survival)
+# 
+# juvenile_surv_df_2=juvenile_surv_df%>%select(-mum_birthyear)%>% #removing birthwt from df cos not going to fit it this time and dont need mum birth yr
+#   #filter(!Sex=="3")%>%
+#   na.omit() 
 
 write.table(juvenile_surv_df,
-            file = "PhD_4th_yr/Inbreeding_depression_models/survival/juvenile_survival_df.txt",
+            file = "PhD_4th_yr/Inbreeding_depression_models/survival/juvenile_survival_df_2.txt",
             row.names = F, quote = F, sep = ",",na = "NA") #saving tables as txt file 
 
 
-write.table(froh_per_chr,
-            file = "PhD_4th_yr/Inbreeding_depression_models/Froh_per_chr.txt",
-            row.names = F, quote = F, sep = "\t")
-
-
+# write.table(froh_per_chr,
+#             file = "PhD_4th_yr/Inbreeding_depression_models/Froh_per_chr.txt",
+#             row.names = F, quote = F, sep = "\t")
+# 
+# 
 

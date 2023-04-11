@@ -4,11 +4,12 @@ library(data.table)
 
 setwd("H:/")
 
-juvenile_surv_df=read.table("PhD_4th_yr/Inbreeding_depression_models/survival/juvenile_survival_df.txt", sep=",", header=T)
+juvenile_surv_df=read.table("PhD_4th_yr/Inbreeding_depression_models/survival/juvenile_survival_df_2.txt", sep=",", header=T)
 
 #head(juvenile_surv_df)
 juvenile_surv_df_na_rm=juvenile_surv_df%>%
   select(-mum_birthyear)%>% #removing birthwt from df cos not going to fit it this time and dont need mum birth yr
+  #filter(!Sex=="3")%>%
   na.omit() #remove all NAs
 ## change some variables to factors 
 juvenile_surv_df_na_rm$BirthYear=as.factor(juvenile_surv_df_na_rm$BirthYear)
@@ -53,5 +54,5 @@ plot(juvenile_surv_model)
 summary(juvenile_surv_model)
 
 
-save(juvenile_surv_model, file="PhD_4th_yr/Inbreeding_depression_models/survival/juvenile_survival_model_output_200kit_50kbu_incBW.RData")
+save(juvenile_surv_model, file="PhD_4th_yr/Inbreeding_depression_models/survival/juvenile_survival_model_output_200kit_50kbu_2.RData")
 

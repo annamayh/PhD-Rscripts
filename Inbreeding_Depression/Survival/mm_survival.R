@@ -76,6 +76,9 @@ juv$juvenile_surv<-1
 
 juv_all<-life%>%plyr::join(juv)%>%mutate_at(vars("juvenile_surv"),~replace_na(.,0))%>%mutate(mum_age_sq=mum_age^2)
 
+juv_all_2=juv_all%>%filter(!DeathType=="S")%>%filter(!DeathType=="A")
+
+table(juv_all_2$juvenile_surv)
 
 #set up df
 

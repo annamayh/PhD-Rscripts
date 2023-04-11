@@ -61,18 +61,18 @@ mean(birth_wt_df_na_rm$CaptureWt) ##this is what we are predicting
 FROH_full<-read.table("PhD_4th_yr/2023_ROH_search/2021_calves_ROH_UpdatedSortedMb_032023.hom.indiv", header=T, stringsAsFactors = F)%>%
   dplyr::select(IID,KB) %>% dplyr::rename(Code=IID)%>%mutate(FROH=KB/2591865)%>%filter(nchar(Code)==5)
 
+## finding means coefficients from df used 
 Sex=1#1=female 2=male
-AgeHrs=median(birth_wt_df_na_rm$AgeHrs)#,edian is 24 hrs 
-mum_age=mean(birth_wt_df_na_rm$mum_age)
+AgeHrs=median(birth_wt_df_na_rm$AgeHrs)#median is 24 hrs 
+mum_age=mean(birth_wt_df_na_rm$mum_age) #mean mum age in dataset
 mum_age_sq=mean(birth_wt_df_na_rm$mum_age_sq)
 
 
 ibc_qua=unname(quantile(FROH_full$FROH, probs = seq(0, 1, 1/20)))#getting the quantiles of FROH values for all ids
-
+##also choose quantiles 
 ibc_qua=c(0,0.05,0.1,0.15,0.2,0.25,0.3)
-
-ibc_qua=seq(0.05,0.25, 0.01)
-
+# ibc_qua=seq(0.05,0.25, 0.01)
+# 
 
 
 
@@ -81,7 +81,7 @@ pred_ibcs=list()
 
 for(v in 1:length(ibc_qua)){
 
-    ibc=ibc_qua[v]
+    ibc=ibc_qua[v] #picking inbreeding coeff from quantiles vector
     FROHsum=(ibc*33)##choose inbreeding coefficient and * by the number of chr (which is what FROHsum is)
     FROHchrs=ibc
     
@@ -90,7 +90,7 @@ for(v in 1:length(ibc_qua)){
     for (i in 1:33){
       bw_pred=summary_table[1,1]+#intercept
         (Sex *(summary_table[2,1]))+ 
-        (AgeHrs*(summary_table[3,1])) + 
+        (AgeHrs*(summary_table[3,1])) + #median age in hrs * coefficient predicted from model
         #(MotherStatus(summary_table[5,1])) + 
         (mum_age*(summary_table[8,1]))+
         (mum_age_sq*(summary_table[9,1]))+
