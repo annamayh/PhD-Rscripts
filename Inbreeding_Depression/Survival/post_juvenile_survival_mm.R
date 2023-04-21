@@ -4,7 +4,7 @@ library(data.table)
 
 setwd("H:/")
 
-load(file="PhD_4th_yr/Inbreeding_depression_models/survival/AA_juvenile_survival_model_output_200kit_50kbu_incBW.RData")
+load(file="PhD_4th_yr/Inbreeding_depression_models/survival/juvenile_survival_model_output_full_exBW.RData")
 
 summary(juvenile_surv_model)
 
@@ -16,13 +16,13 @@ FROH_sum_sol=summary(juvenile_surv_model)$solutions[7,1]
 mean(rowSums(juvenile_surv_model$VCV))
 
 
-sols_full<-as.data.frame(juvenile_surv_model$Sol)%>%dplyr::select(matches("FROH_"))#%>% ## taking out sols with FROH included
-  dplyr::mutate(across(2:34, ~.x + FROHsum)) ## adding FROHsum to chrFROH values
+sols_full<-as.data.frame(juvenile_surv_model$Sol)%>%dplyr::select(matches("FROH_"))%>% ## taking out sols with FROH included
+ dplyr::mutate(across(1:33, ~.x + FROH_sum_sol)) ## adding FROHsum to chrFROH values
 
 names <- sols_full %>% names ## gets names of all random variables, 2 = all down row
 sols<-apply(sols_full,2,mean)#gets mean of all solutions i.e. the effect size of random effects 
-CI_upper<-apply(sols_full,2,quantile,probs = c(0.95)) #gets upper confidence interval for all solutions 
-CI_lower<-apply(sols_full,2,quantile,probs = c(0.05)) #gets lower CI for all solutions
+CI_upper<-apply(sols_full,2,quantile,probs = c(0.975)) #gets upper confidence interval for all solutions 
+CI_lower<-apply(sols_full,2,quantile,probs = c(0.025)) #gets lower CI for all solutions
 
 Random_table<-tibble(sols,row.names=names)%>%add_column(CI_upper)%>%add_column(CI_lower)
 
@@ -42,7 +42,7 @@ ggplot(data=FROH_sols, aes(x=CHR, y=solution, ymin=CI_lower, ymax=CI_upper, colo
   geom_hline(yintercept=0, lty=2) +  # black line is 0
   geom_hline(yintercept=FROH_sum_sol, lty=1,colour="red") + ## red line is the average effect of all chromosomes 
   coord_flip() +  # flip coordinates (puts labels on y axis)
-  labs(x="Chromosome", y="solution + CI", title = "Chromosome FROH on survival (Exl shot ids that didnt make it to adulthood)") +
+  labs(x="Chromosome", y="solution + CI", title = "Chromosome FROH on survival (inc BW, including shot ids that survived to adult)") +
   theme_bw()+  # use a white background                 
   theme(legend.position = "none")+
   scale_color_manual(values=c("grey50","red"),guide=FALSE)
@@ -57,17 +57,13 @@ sum(FROH_sols$solution)
 ###################################################################################################################
 
 
-juvenile_surv_df=read.table("PhD_4th_yr/Inbreeding_depression_models/survival/juvenile_survival_df.txt", sep=",", header=T)
-juvenile_surv_df_na_rm=juvenile_surv_df%>%
-  dplyr::select(-mum_birthyear)%>% #removing birthwt from df cos not going to fit it this time and dont need mum birth yr
-  na.omit() 
-
 Sex=1#1=female 2=male
 mum_age=mean(juvenile_surv_df_na_rm$mum_age)
 mum_age_sq=mum_age^2
+#FROHsum=mean(juvenile_surv_df_na_rm$FROHsum)
 #mum_age_sq=mean(juvenile_surv_df_na_rm$mum_age_sq)
-BirthWt=mean(juvenile_surv_df_na_rm$BirthWt)
-
+#BirthWt=mean(juvenile_surv_df_na_rm$BirthWt)
+# 
 # FROH_full<-read.table("PhD_4th_yr/2023_ROH_search/2021_calves_ROH_UpdatedSortedMb_032023.hom.indiv", header=T, stringsAsFactors = F)%>%
 #   dplyr::select(IID,KB) %>% dplyr::rename(Code=IID)%>%mutate(FROH=KB/2591865)%>%filter(nchar(Code)==5)
 # ibc_qua=unname(quantile(FROH_full$FROH, probs = seq(0, 1, 1/20)))#getting the quantiles of FROH values for all ids
@@ -79,7 +75,7 @@ pred_ibcs=list()
 for(v in 1:length(ibc_qua)){
 
         ibc=ibc_qua[v]
-        FROHsum=(ibc*33)##choose inbreeding coefficient and * by the number of chr (which is what FROHsum is)
+        #FROHsum=(ibc*33)##choose inbreeding coefficient and * by the number of chr (which is what FROHsum is)
         FROHchrs=ibc
 
 
@@ -92,8 +88,8 @@ for(v in 1:length(ibc_qua)){
               ((summary_table[5,1])) + 
               (mum_age*(summary_table[8,1]))+
               (mum_age_sq*(summary_table[9,1]))+
-              (FROHsum*(summary_table[7,1]))+
-              (BirthWt*(summary_table[10,1]))+
+             # (FROHsum*(summary_table[7,1]))+
+              #(BirthWt*(summary_table[10,1]))+
               (FROHchrs*(as.numeric(FROH_sols[i,1])))
             
             surv_pred_list[[i]]=pnorm(surv_pred,0,mean(rowSums(juvenile_surv_model$VCV)))
@@ -117,38 +113,37 @@ pred_ibcs_all=do.call(rbind.data.frame,pred_ibcs)
 
 
 ggplot(data=pred_ibcs_all,aes(x=ibc,y=surv_prediction, group=CHR, colour=CHR))+
-  geom_line()+
+  geom_line(linewidth=1)+
   theme_bw()#+
   ylim(0,1)
 
 
 
+  
+  
+  
+  
+  ################################################################################################
+  ################################################################################################
+  
+  
+  sols_fixed_df=as.data.frame(juvenile_surv_model$Sol[,1:42])
+  i=1
+  
+  row=sols_fixed_df[1,]
+  
+  
+  surv_pred_list=list()
 
-#which is weird cos females = 0.47 and males = 0.3
-
-
-
-
-
-
-
-
-
-##surv prob of FROH=0.125 vs FROH=0 in females 
-0.2411362/0.4718475 ##~51% so pretty close to jiscas estimate
-
-
-##males 
-
-0.1284986/0.2930601## ~44%
-
-
-
-###  check how many ids do survive
-
-table(juvenile_surv_df$juvenile_survival)
-
-# 0    1 
-# 1024  437 
-# == ~30% survival rate to age 2 .. which makes sense for my model outputs
-
+    chr_col=9+i
+    surv_pred=row$`(Intercept)`+#intercept
+      (Sex *(row$Sex2))+ 
+      ((row$`MotherStatusTrue yeld`)) + 
+      (mum_age*(row$mum_age))+
+      (mum_age_sq*(row$mum_age_sq))+
+      
+      (FROHchrs*row[chr_col])
+    
+    surv_pred_list[[i]]=pnorm(surv_pred,0,mean(rowSums(juvenile_surv_model$VCV)))
+    
+  

@@ -4,7 +4,7 @@ library(RODBC)
 
 
 
-db<-"C:\\Users\\s1881212\\Documents\\Deer_database_2022/RedDeer2.05.accdb" #open connection
+db<-"C:\\Users\\s1881212\\Documents\\Deer_database_2022/RedDeer2.05.1.accdb" #open connection
 con<-odbcConnectAccess2007(db)
 
 mum_birthyr<-sqlFetch(con, "tbllife")%>%dplyr::select(Code,BirthYear)%>%dplyr::rename(mum_birthyear=BirthYear,MumCode=Code)
@@ -102,17 +102,13 @@ table(juvenile_surv$juvenile_survival)
 juvenile_surv_shot=year_juve%>%filter(DeathType== "S"&juvenile_survival=="1")%>%
   select(Code, BirthYear, Sex, MumCode, juvenile_survival)
 
-table(juvenile_survcheck$juvenile_survival)
+table(juvenile_surv_shot$juvenile_survival)
 
+## adding ids that survived to age 2 then were shot to the df
 juvenile_surv=juvenile_surv%>%rbind(juvenile_surv_shot)
 table(juvenile_surv$juvenile_survival)
 
-# 
-# juvenile_surv_shot_notsurv=year_juve%>%filter(DeathType== "S"&juvenile_survival=="0")%>%inner_join(FROH_full)
-# mean(juvenile_surv_shot_notsurv$FROH)
-# 
-# juvenile_surv_shot_notsurv=year_juve%>%filter(DeathType== "S"&juvenile_survival=="1")%>%inner_join(FROH_full)
-# mean(juvenile_surv_shot_notsurv$FROH)
+
 # 
 # ## read in FROH values
 
@@ -148,7 +144,8 @@ juvenile_surv_df=juvenile_surv%>%
   left_join(mum_stat)%>%left_join(birth_wt)%>%
   left_join(mum_birthyr)%>%mutate(mum_age=BirthYear-mum_birthyear)%>%
   right_join(froh_per_chr)%>%## only joining when ids have FROH values
-  mutate(mum_age_sq=mum_age^2)
+  mutate(mum_age_sq=mum_age^2)%>%
+  select(-mum_birthyear)#dont need mum birth yr in df anymore
 ##some NAs in mum stat and birth weight
 
 
@@ -159,13 +156,6 @@ table(juvenile_surv_df$juvenile_survival)
 #   na.omit() 
 
 write.table(juvenile_surv_df,
-            file = "PhD_4th_yr/Inbreeding_depression_models/survival/juvenile_survival_df_2.txt",
+            file = "PhD_4th_yr/Inbreeding_depression_models/survival/AA_juvenile_survival_df.txt",
             row.names = F, quote = F, sep = ",",na = "NA") #saving tables as txt file 
-
-
-# write.table(froh_per_chr,
-#             file = "PhD_4th_yr/Inbreeding_depression_models/Froh_per_chr.txt",
-#             row.names = F, quote = F, sep = "\t")
-# 
-# 
 
