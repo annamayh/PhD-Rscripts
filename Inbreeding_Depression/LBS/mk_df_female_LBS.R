@@ -1,19 +1,23 @@
 library(RODBC)
 library(tidyverse)
-library(MCMCglmm)
-library(MasterBayes)
-library(data.table)
 
 
-db<-"C:\\Users\\s1881212\\Documents\\Deer_database_2022/RedDeer2.05.accdb" #open connection
+
+db<-"C:\\Users\\s1881212\\Documents\\Deer_database_2022/RedDeer2.05.1.accdb" #open connection
 con<-odbcConnectAccess2007(db)
 
 female_LBS<-sqlFetch(con, "sys_LBS+LRS") #built in query - Calculate LBS and LRS for dead hinds
 
+Dlife<-sqlFetch(con, "sys_DLife") #built in query - Calculate LBS and LRS for dead hinds
+
+
 life<-sqlFetch(con, "tbllife") %>% 
-  dplyr::select(Code, BirthYear, MumCode)
+  dplyr::select(Code, BirthYear, MumCode,DeathType)
 
 odbcClose(con)
+
+
+
 
 
 
@@ -38,11 +42,28 @@ colnames(froh_per_chr) <- c("Code", paste0("FROH_chr", 1:33),"FROHsum","FROH_sum
 
 
 
+female_still_alive=Dlife%>%filter(DeerYear==2021)%>%
+  filter(Age>=14)%>%
+  select(Code, Age)%>%
+  inner_join(female_LBS)%>%
+  inner_join(froh_per_chr)%>%
+  left_join(life)%>%
+filter(if_any(DeathType, is.na)) %>%##10 still alove
+  select(-DeathType, -Age)
+  
+
+
 
 female_LBS_df=female_LBS%>%
-  left_join(froh_per_chr)%>%left_join(life)%>%
+  inner_join(froh_per_chr)%>%
+  left_join(life)%>%
+  filter(DeathType!= "S"| is.na(DeathType))%>% #keep ids that died a natural death also filters out ids with no recorded death type 
+  filter(DeathType!= "A" | is.na(DeathType)) %>% ##sample size reduced from 1498 to 1070
+  filter(DeathType!= "D"| is.na(DeathType) )%>%
+  filter(BirthYear<=2006)%>% ## remove females younger than 14 as may not have reached full LBS yet
+  select(-DeathType)%>%
+  rbind(female_still_alive)%>%
   na.omit()
-
 
 
 write.table(female_LBS_df,

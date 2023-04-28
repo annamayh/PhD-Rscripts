@@ -1,12 +1,11 @@
 
 library(MCMCglmm)
-library(MasterBayes)
 library(data.table)
 
 setwd("H:/")
 
 female_LBS_df=read.table("PhD_4th_yr/Inbreeding_depression_models/LBS/female_LBS_df.txt", sep=",", header=T)
-
+#692 ids
 female_LBS_df$Code=as.factor(female_LBS_df$Code)
 female_LBS_df$BirthYear=as.factor(female_LBS_df$BirthYear)
 female_LBS_df$MumCode=as.factor(female_LBS_df$MumCode)
@@ -29,12 +28,12 @@ female_LBS_model=MCMCglmm(LBS~ trait+trait:FROHsum-1,
                                   FROH_chr33), 
                           rcov = ~ idh(trait):units,
                           data = female_LBS_df, 
-                          family = "zipoisson", 
+                          family = "hupoisson", 
                           prior = prior.2,
                           #verbose = FALSE, 
                           pr = TRUE, 
                           pl = TRUE,
-                          nitt=1000000, burnin=100000, thin = 500
+                          nitt=1000000, burnin=150000, thin = 100
 )
 
 
@@ -47,4 +46,4 @@ summary(female_LBS_model)
 
 
 
-save(female_LBS_model, file="PhD_4th_yr/Inbreeding_depression_models/LBS/Female_LBS_model_output_1mit.RData")
+save(female_LBS_df,female_LBS_model, file="PhD_4th_yr/Inbreeding_depression_models/LBS/Female_LBS_model_output_final.RData")

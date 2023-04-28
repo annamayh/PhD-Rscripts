@@ -9,7 +9,7 @@ db<-"C:\\Users\\s1881212\\Documents\\Deer_database_2022/RedDeer2.05.1.accdb" #op
 con<-odbcConnectAccess2007(db)
 ped<-sqlFetch(con, "sys_Pedigree")%>%dplyr::select(Code, BirthYear,MumCode,Sire)
 life<-sqlFetch(con, "tbllife") %>% 
-  dplyr::select(Code,DeathYear,Sex,DeathType)
+  dplyr::select(Code,DeathYear,Sex,DeathType,BirthYear)
 odbcClose(con)
 
 sire_count=ped%>%dplyr::select(Code,Sire)%>%
@@ -22,7 +22,8 @@ dead_males=life%>%
   filter(DeathType!= "A" ) %>% ##
   filter(DeathType!= "D" )
 
-all_male_LBS=left_join(dead_males,sire_count)
+all_male_LBS=left_join(dead_males,sire_count)%>% #before filter 1251, after956
+  filter(BirthYear<2006)
 all_male_LBS[is.na(all_male_LBS)] <- 0 #males with no recorded sired ids given 0 LBS
 
 
