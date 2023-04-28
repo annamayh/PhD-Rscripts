@@ -36,7 +36,7 @@ ggplot(data=FROH_sols, aes(x=CHR, y=solution, ymin=CI_lower, ymax=CI_upper)) +
   geom_hline(yintercept=0, lty=2) +  # black line is 0
   geom_hline(yintercept=FROH_sum_sol_pois, lty=1,colour="red") + ## red line is the average effect of all chromosomes 
   coord_flip() +  # flip coordinates (puts labels on y axis)
-  labs(x="Chromosome", y="solution + CI ") +
+  labs(x="Chromosome", y="Posterior mean estimate + CI ") +
   theme_bw()+  # use a white background                 
   theme(legend.position = "none")+
   scale_color_manual("grey50")

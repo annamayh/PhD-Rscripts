@@ -1,16 +1,15 @@
 ## MALE LBS ###
 library(RODBC)
 library(tidyverse)
-library(MCMCglmm)
-library(MasterBayes)
+
 
 # Set up dataframe #
 
-db<-"C:\\Users\\s1881212\\Documents\\Deer_database_2022/RedDeer2.05.accdb" #open connection
+db<-"C:\\Users\\s1881212\\Documents\\Deer_database_2022/RedDeer2.05.1.accdb" #open connection
 con<-odbcConnectAccess2007(db)
 ped<-sqlFetch(con, "sys_Pedigree")%>%dplyr::select(Code, BirthYear,MumCode,Sire)
 life<-sqlFetch(con, "tbllife") %>% 
-  dplyr::select(Code,DeathYear,Sex)
+  dplyr::select(Code,DeathYear,Sex,DeathType)
 odbcClose(con)
 
 sire_count=ped%>%dplyr::select(Code,Sire)%>%
@@ -19,7 +18,9 @@ sire_count=ped%>%dplyr::select(Code,Sire)%>%
 
 dead_males=life%>%
   filter(Sex=="2")%>% #select males
-  na.omit() ##removing males that are still alive (i.e. no death recorded)
+  filter(DeathType!= "S")%>% #filter out ids that were shot so we only keep ids that died a natural death 
+  filter(DeathType!= "A" ) %>% ##
+  filter(DeathType!= "D" )
 
 all_male_LBS=left_join(dead_males,sire_count)
 all_male_LBS[is.na(all_male_LBS)] <- 0 #males with no recorded sired ids given 0 LBS
@@ -48,11 +49,11 @@ colnames(froh_per_chr) <- c("Code", paste0("FROH_chr", 1:33),"FROHsum","FROH_sum
 # Combine dataframes #
 
 male_LBS_df=all_male_LBS%>%
-  plyr::join(froh_per_chr)%>%plyr::join(ped)%>%
-  dplyr::select(-Sire, -DeathYear, -Sex)%>%
+  left_join(froh_per_chr)%>%left_join(ped)%>%
+  dplyr::select(-Sire, -DeathYear, -Sex, -DeathType)%>%
   na.omit()
 
-
+#842 male ids 
 
 write.table(male_LBS_df,
             file = "PhD_4th_yr/Inbreeding_depression_models/LBS/Male_LBS_df.txt",

@@ -1,10 +1,9 @@
 
 
 ## MALE LBS ###
-library(RODBC)
 library(tidyverse)
 library(MCMCglmm)
-library(MasterBayes)
+
 
 
 
@@ -41,7 +40,7 @@ male_LBS_model=MCMCglmm(LBS~ trait+trait:FROHsum-1,
                         #verbose = FALSE, 
                         pr = TRUE, 
                         pl = TRUE,
-                        nitt=1500000, burnin=150000, thin = 500
+                        nitt=1000000, burnin=150000, thin = 100
 )
 
 
@@ -58,4 +57,4 @@ summary(male_LBS_model)
 
 
 
-save(male_LBS_model, file="PhD_4th_yr/Inbreeding_depression_models/LBS/male_LBS_model_output_1.5mit.RData")
+save(male_LBS_model,male_LBS_df, file="PhD_4th_yr/Inbreeding_depression_models/LBS/male_LBS_model_output_final.RData")

@@ -40,7 +40,7 @@ juvenile_surv_model<-MCMCglmm(juvenile_survival~1 + Sex + MotherStatus + FROHsum
                  data=juvenile_surv_df_na_rm,
                  prior = prior,
                  pr=TRUE,#saves posterior dist for random effects i.e. what we want
-                 nitt=250000,burnin=50000
+                 nitt=300000,burnin=50000, thin = 100
                  )##
 
 
@@ -55,5 +55,5 @@ plot(juvenile_surv_model)
 summary(juvenile_surv_model)
 
 
-save(juvenile_surv_model, juvenile_surv_df_na_rm, file="PhD_4th_yr/Inbreeding_depression_models/survival/juvenile_survival_model_output_full_BW.RData")
+save(juvenile_surv_model, juvenile_surv_df_na_rm, file="PhD_4th_yr/Inbreeding_depression_models/survival/juvenile_survival_model_output_full.RData")
 
