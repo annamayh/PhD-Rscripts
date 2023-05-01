@@ -1,6 +1,7 @@
 
 library(tidyverse)
-
+library(data.table)
+setwd("H:/")
 load(file="PhD_4th_yr/Inbreeding_depression_models/birth_weight/birth_wt_model_output_incmumage_50kit_50bin.RData")
 
 
@@ -8,6 +9,10 @@ summary_table=summary(birth_wt_model)$solutions
 summary_table
 
 FROH_sum_sol=summary(birth_wt_model)$solutions[10,1]
+FROHsumest=as.data.frame(birth_wt_model$Sol)%>%dplyr::select(matches("FROHs"))
+FROH_sum_hu_upr=quantile(FROHsumest$FROHsum, prob=c(0.975)) 
+FROH_sum_hu_lwr=quantile(FROHsumest$FROHsum, prob=c(0.025)) 
+
 
 
 
@@ -16,8 +21,8 @@ sols_full<-as.data.frame(birth_wt_model$Sol)%>%dplyr::select(matches("FROH"))%>%
 
 names <- sols_full %>% names ## gets names of all random variables, 2 = all down row
 sols<-apply(sols_full,2,mean)#gets mean of all solutions i.e. the effect size of random effects 
-CI_upper<-apply(sols_full,2,quantile,probs = c(0.95)) #gets upper confidence interval for all solutions 
-CI_lower<-apply(sols_full,2,quantile,probs = c(0.05)) #gets lower CI for all solutions
+CI_upper<-apply(sols_full,2,quantile,probs = c(0.975)) #gets upper confidence interval for all solutions 
+CI_lower<-apply(sols_full,2,quantile,probs = c(0.025)) #gets lower CI for all solutions
 
 Random_table<-tibble(sols,row.names=names)%>%add_column(CI_upper)%>%add_column(CI_lower)
 
@@ -30,14 +35,28 @@ FROH_sols$CHR<-as.factor(FROH_sols$CHR)
 
 
 
-ggplot(data=FROH_sols, aes(x=CHR, y=solution, ymin=CI_lower, ymax=CI_upper)) +
+forest=ggplot(data=FROH_sols, aes(x=CHR, y=solution, ymin=CI_lower, ymax=CI_upper)) +
   geom_pointrange(colour="grey50") + #plots lines based on Y and lower and upper CI
   geom_hline(yintercept=0, lty=2) +  # black line is 0
   geom_hline(yintercept=FROH_sum_sol, lty=1,colour="red") + ## red line is the average effect of all chromosomes 
   coord_flip() +  # flip coordinates (puts labels on y axis)
-  labs(x="Chromosome", y="solution + CI", title = "Chromosome FROH on BirthWt (inc mum age)") +
-  theme_bw()+  # use a white background                 
-  theme(legend.position = "none")
+  labs(x="Chromosome", y="Posterior estimate + CI", title = "Deviation of chromosomal inbreeding \neffects from combined effect\nof all chromosomes") +
+  theme_classic()+  # use a white background                 
+  theme(legend.position = "none")+
+  ## line of FROHsum estimate
+  annotate("segment", x = 0, xend = 34, y = FROH_sum_sol, yend = FROH_sum_sol, colour = "red", alpha=0.6)+
+  ##add in estimate of FROHsum
+  annotate("pointrange", x = 34, y = FROH_sum_sol, ymin = FROH_sum_hu_upr, ymax = FROH_sum_hu_lwr,
+           colour = "red", linewidth = 1, alpha=0.5, size=0.2)+
+  annotate("segment", x = 35, xend = 35, y = 0, yend = FROH_sum_sol, colour = "red", alpha=0.5, linewidth=1)+
+  #two lines between sig line 
+  annotate("segment", x = 35, xend = 34.5, y = 0,  yend=0, colour = "red", alpha=0.5, linewidth=1)+
+  annotate("segment", x = 35, xend = 34.5, y = FROH_sum_sol, yend = FROH_sum_sol, colour = "red", alpha=0.5, linewidth=1)+
+  ##significance of FROHsum
+  geom_text(aes(x=35.5, y=-0.05, label="***"), colour="red", alpha=0.5)+
+  expand_limits(x = 36)
+
+
 
 
 ###############################################################################################################
@@ -58,8 +77,6 @@ mean(birth_wt_df_na_rm$CaptureWt) ##this is what we are predicting
 #mean(birth_wt_df_na_rm$BirthWt)
 #6.483708
 
-FROH_full<-read.table("PhD_4th_yr/2023_ROH_search/2021_calves_ROH_UpdatedSortedMb_032023.hom.indiv", header=T, stringsAsFactors = F)%>%
-  dplyr::select(IID,KB) %>% dplyr::rename(Code=IID)%>%mutate(FROH=KB/2591865)%>%filter(nchar(Code)==5)
 
 ## finding means coefficients from df used 
 Sex=1#1=female 2=male
@@ -68,11 +85,9 @@ mum_age=mean(birth_wt_df_na_rm$mum_age) #mean mum age in dataset
 mum_age_sq=mean(birth_wt_df_na_rm$mum_age_sq)
 
 
-ibc_qua=unname(quantile(FROH_full$FROH, probs = seq(0, 1, 1/20)))#getting the quantiles of FROH values for all ids
 ##also choose quantiles 
 ibc_qua=c(0,0.05,0.1,0.15,0.2,0.25,0.3)
-# ibc_qua=seq(0.05,0.25, 0.01)
-# 
+ 
 
 
 
@@ -82,8 +97,8 @@ pred_ibcs=list()
 for(v in 1:length(ibc_qua)){
 
     ibc=ibc_qua[v] #picking inbreeding coeff from quantiles vector
-    FROHsum=(ibc*33)##choose inbreeding coefficient and * by the number of chr (which is what FROHsum is)
-    FROHchrs=ibc
+   # FROHsum=(ibc*33)##choose inbreeding coefficient and * by the number of chr (which is what FROHsum is)
+    #FROHchrs=ibc
     
     bw_pred_list=list()
     
@@ -91,11 +106,9 @@ for(v in 1:length(ibc_qua)){
       bw_pred=summary_table[1,1]+#intercept
         (Sex *(summary_table[2,1]))+ 
         (AgeHrs*(summary_table[3,1])) + #median age in hrs * coefficient predicted from model
-        #(MotherStatus(summary_table[5,1])) + 
         (mum_age*(summary_table[8,1]))+
         (mum_age_sq*(summary_table[9,1]))+
-        (FROHsum*(summary_table[10,1]))+
-        (FROHchrs*(as.numeric(FROH_sols[i,1])))
+        (ibc*(as.numeric(FROH_sols[i,1])))
       bw_pred_list[i]=bw_pred
     }
     
@@ -110,12 +123,122 @@ for(v in 1:length(ibc_qua)){
 }
 
 
-#pred_ibcs[[1]]
 
 
 pred_ibcs_all=do.call(rbind.data.frame,pred_ibcs)
 
+pred_ibcs_all$CHR=as.numeric(pred_ibcs_all$CHR)
 
-ggplot(data=pred_ibcs_all,aes(x=ibc,y=bw_prediction, group=CHR, colour=CHR))+
-  geom_line()+
-  theme_bw()
+
+chrind=pred_ibcs_all%>%arrange(CHR)%>%
+  ggplot(aes(x=as.numeric(ibc),y=bw_prediction, group=as.factor(CHR), colour=as.factor(CHR)))+
+  geom_line(linewidth=1)+
+  theme_bw()+
+  labs(x=" Inbreeding coefficient", y="Capture weight prediction (kg)", title="Predicted capture weight assuming \nchromosme independence",colour="Chromosome" )
+
+chrind
+
+
+
+
+
+### now assumung indiv is inbred by same amount on all chromosomes
+# plus CIs
+
+
+
+
+inter=as.data.frame(birth_wt_model$Sol)%>%dplyr::select(matches("Interc"))
+
+FROHsumest=as.data.frame(birth_wt_model$Sol)%>%dplyr::select(matches("FROHs"))
+
+sex_ests=as.data.frame(birth_wt_model$Sol)%>%dplyr::select(matches("Sex"))
+sex_ests=sex_ests*Sex
+
+age_ests=as.data.frame(birth_wt_model$Sol)%>%dplyr::select(("AgeHrs"))
+age_ests=age_ests*AgeHrs
+
+mumage_ests=as.data.frame(birth_wt_model$Sol)%>%dplyr::select(("mum_age"))
+mumage_ests=mumage_ests*mum_age
+
+mumagesq_ests=as.data.frame(birth_wt_model$Sol)%>%dplyr::select(("mum_age_sq"))
+mumagesq_ests=mumagesq_ests*(mum_age^2)
+
+
+all_effects=as.matrix(rowSums(inter%>%cbind(sex_ests)%>%cbind(age_ests)%>%cbind(mumage_ests)%>%cbind(mumagesq_ests)))
+
+
+ibc_qua=c(0,0.05,0.1,0.15,0.2,0.25,0.3)
+
+
+chr_sols=as.data.frame(birth_wt_model$Sol)%>%dplyr::select(matches("FROH_"))
+chr_sols=as.matrix(chr_sols)
+
+head(chr_sols)
+
+
+pred_nonind=list()
+for(v in 1:length(ibc_qua)){
+  
+
+    ibc=ibc_qua[v]
+    
+    if (ibc==0){
+    #when ibc=0 does work as all ibc are 0   
+    all_its=all_effects
+      
+    }else{
+    FROHsum_sol=FROHsumest*ibc*33
+  
+    sols_mult_ibc=chr_sols*ibc
+    sols_mult_ibc=sols_mult_ibc+FROHsum_sol
+    
+    sum_chrs=rowSums(sols_mult_ibc)
+    
+    
+    all_its=sum_chrs+all_effects
+    }
+    
+    
+    mean=mean(all_its)
+    quantU=quantile(all_its, prob=c(0.975)) 
+    quantL=quantile(all_its, prob=c(0.025)) 
+    
+    
+    pred_mat=matrix(c(mean,quantU,quantL,(paste0(round(ibc, digits = 4)))), nrow=1, ncol=4)
+
+    
+    pred_nonind[[v]]=pred_mat  
+    }
+
+
+
+pred_ibcs_mean=do.call(rbind.data.frame,pred_nonind) 
+
+names(pred_ibcs_mean)<-c("Mean","upperCI","lowerCI","ibc")
+pred_ibcs_mean <- sapply(pred_ibcs_mean, as.numeric)%>%as.data.frame()
+
+
+
+chrnonind=ggplot(data=pred_ibcs_mean,aes(x=ibc,y=Mean))+
+  geom_line(size=1)+
+  theme_bw()+
+  labs(x="Inbreeding coefficient", y="Predicted Capture weight", title="Predicted capture weight (kg) assuming \nequal inbreeding on all chromosomes")+
+  geom_ribbon(aes(ymin = lowerCI, ymax = upperCI), alpha = 0.1)
+
+#chrnonind
+
+#library(patchwork)
+
+Bw_3in1=forest+chrnonind+chrind+plot_annotation(tag_levels = 'A')
+
+
+
+ggsave(Bw_3in1,
+       file = "PhD_4th_yr/Inbreeding_depression_models/birth_weight/all3_birthweight.png",
+       width = 17,
+       height = 6)
+
+
+
+
