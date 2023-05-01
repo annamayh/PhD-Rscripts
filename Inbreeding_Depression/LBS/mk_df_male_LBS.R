@@ -23,7 +23,7 @@ dead_males=life%>%
   filter(DeathType!= "D" )
 
 all_male_LBS=left_join(dead_males,sire_count)%>% #before filter 1251, after956
-  filter(BirthYear<2006)
+  filter(BirthYear<=2006)
 all_male_LBS[is.na(all_male_LBS)] <- 0 #males with no recorded sired ids given 0 LBS
 
 
