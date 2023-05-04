@@ -81,7 +81,7 @@ sum(FROH_sols$solution)
   ################################################################################################
   ################################################################################################
 
-Sex=1#1=female 2=male
+Sex=1.5#1=female 2=male good to just take average 
 mum_age=mean(juvenile_surv_df_na_rm$mum_age)
 mum_age_sq=mum_age^2
 
@@ -109,7 +109,7 @@ FROHsumest=as.data.frame(juvenile_surv_model$Sol)%>%dplyr::select(matches("FROHs
 chr_sols=as.matrix(sols_full)
 
 transform_prediction=function(prediction){
-  survival_prediction_table=pnorm(prediction,0,mean(rowSums(juvenile_surv_model$VCV)))
+  survival_prediction_table=pnorm(prediction,0,mean(rowSums(juvenile_surv_model$VCV)))##mean=0 sd=random effects
 }
 
 

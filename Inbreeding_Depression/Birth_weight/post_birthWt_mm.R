@@ -14,7 +14,7 @@ FROH_sum_hu_upr=quantile(FROHsumest$FROHsum, prob=c(0.975))
 FROH_sum_hu_lwr=quantile(FROHsumest$FROHsum, prob=c(0.025)) 
 
 
-
+rands=as.data.frame(birth_wt_model$VCV)
 
 sols_full<-as.data.frame(birth_wt_model$Sol)%>%dplyr::select(matches("FROH"))%>% ## taking out sols with FROH included
   dplyr::mutate(across(2:34, ~.x + FROHsum)) ## adding FROHsum to chrFROH values
@@ -145,7 +145,7 @@ chrind
 ### now assumung indiv is inbred by same amount on all chromosomes
 # plus CIs
 
-
+Sex=2
 
 
 inter=as.data.frame(birth_wt_model$Sol)%>%dplyr::select(matches("Interc"))
@@ -184,8 +184,7 @@ for(v in 1:length(ibc_qua)){
     ibc=ibc_qua[v]
     
     if (ibc==0){
-    #when ibc=0 does work as all ibc are 0   
-    all_its=all_effects
+    all_its=all_effects # when ibc = inbreeding has no effect 
       
     }else{
     FROHsum_sol=FROHsumest*ibc*33
@@ -221,12 +220,12 @@ pred_ibcs_mean <- sapply(pred_ibcs_mean, as.numeric)%>%as.data.frame()
 
 
 chrnonind=ggplot(data=pred_ibcs_mean,aes(x=ibc,y=Mean))+
-  geom_line(size=1)+
+  geom_line(linewidth=1)+
   theme_bw()+
   labs(x="Inbreeding coefficient", y="Predicted Capture weight", title="Predicted capture weight (kg) assuming \nequal inbreeding on all chromosomes")+
   geom_ribbon(aes(ymin = lowerCI, ymax = upperCI), alpha = 0.1)
 
-#chrnonind
+chrnonind
 
 #library(patchwork)
 

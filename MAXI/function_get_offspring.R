@@ -1,15 +1,20 @@
-library(dplyr)
-library(purrr)
-
 ### This script is a function to get all the decendents of an individual or individuals in a list ###
 ### Compiling all offspring of an idiv then moving to the next generation to compile all their offfspring to gte the decendents ##
 ## Help from Martin Stoffel ##
 
 
-setwd("H:/PHD 1st YR")
+library(RODBC)
+library(tidyverse)
+library(data.table)
 
-ped<-read.csv("Deer data/Database/RumPedigree_birth_07_2020.csv", header = TRUE, stringsAsFactors = FALSE)%>%
-  select(-SireProbability)
+
+
+db<-"C:\\Users\\s1881212\\Documents\\Deer_database_2022/RedDeer2.05.accdb" #open connection
+con<-odbcConnectAccess2007(db)
+
+ped<-sqlFetch(con, "sys_Pedigree")%>%dplyr::select(Code, MumCode,Sire)
+odbcClose(con) #close connection
+
 
 ped<-ped[!((ped$MumCode=="") & ped$Sire==""), ] ##getting rid of ids with no mum or dad records 
 head(ped)
