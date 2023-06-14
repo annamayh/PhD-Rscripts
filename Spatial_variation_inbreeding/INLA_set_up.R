@@ -7,23 +7,55 @@ library(ggregplot)
 
 setwd("H:/")
 
-rum_outline=read.csv("PhD_4th_yr/Spatial_var_inbreeding/INLA/RumBoundary.csv")
+spatial_FROH=read.table("PhD_4th_yr/Spatial_var_inbreeding/INLA/Location_plus_FROH.txt", sep = ",", header = TRUE)%>%
+  filter(!E>1385)%>%
+  filter(!N<7997.5)%>% #remove 38 records outside the syudy areas
+  rename(X = E, Y = N) %>% #rename easting and northing to X and Y
+  mutate(year_cont=BirthYear-min(BirthYear))#%>% #get cntinuous vairable of birth year
+ # mutate(FROH=FROH*10)
+
+###########################################################################################
+## model selection using INLA
+############################################################################
+
+IM1  <- inla(FROH~year_cont, 
+             family = "gaussian",
+             data = spatial_FROH,
+             control.compute = list(dic=TRUE)) 
+
+
+summary(IM1)
+
+
+spatial_FROH$BirthYear=as.factor(spatial_FROH$BirthYear)#treating birth yr as a factor
+
+IM2  <- inla(FROH~year_cont+f(BirthYear, model = 'iid'), 
+             family = "gaussian",
+             data = spatial_FROH,
+             control.compute = list(dic=TRUE)) 
+
+
+summary(IM2)
+## looks like year as a random variable explains some variation but not year as a continuous: makes sense 
+
+
+##############################################################################################
+setwd("H:/")
+
+rum_outline=read.csv("PhD_4th_yr/Spatial_var_inbreeding/INLA/RumBoundary.csv")%>%
+  rename(X = Easting, Y = Northing) 
+  
 
 
 N=nrow(rum_outline)
-rum_line_rev=rum_outline[N:1, c("Easting","Northing")]
+rum_line_rev=rum_outline[N:1, c("X","Y")]
 
-mesh=inla.mesh.2d(loc.domain= rum_outline, 
+Mesh=inla.mesh.2d(loc.domain= rum_outline, 
                   max.edge=2, #probs use 1 for actual model
                   boundary=
                   inla.mesh.segment(rum_line_rev))
 
-plot(mesh, asp=1)
-
-spatial_FROH=read.table("PhD_4th_yr/Spatial_var_inbreeding/INLA/Location_plus_FROH.txt", sep = ",", header = TRUE)%>%
-  filter(!E>1385)%>%
-  filter(!N<7997.5) #remove 38 records outside the syudy areas
-
+plot(Mesh, asp=1)
 
 LocToReg6 <- function(E, N) {
   ifelse(N < 8019, "SG", #south glen
@@ -33,35 +65,15 @@ LocToReg6 <- function(E, N) {
                        ifelse(E < 1373 , "IM", "SI")))) }
 
 
-spatial_FROH$Reg <- with(spatial_FROH, LocToReg6(E, N))
+spatial_FROH$Reg <- with(spatial_FROH, LocToReg6(X, Y))
 
 ### plotting visual of mesh 
-(Rum_mesh=ggplot()+
-  gg(mesh)+
-  geom_point(aes(spatial_FROH$E, spatial_FROH$N, colour=spatial_FROH$Reg), alpha=0.4)+
+Rum_mesh=ggplot()+
+  gg(Mesh)+
+  geom_point(aes(spatial_FROH$X, spatial_FROH$Y, colour=spatial_FROH$Reg), alpha=0.4)+
   theme_classic()+
-  labs(x="Easting", y="Northing"))
-
-
-
-###########################################################################################
-## model selection using INLA
-############################################################################
-
-resp_var="FROH" #defining response variable
-
-covar=c("BirthYear") #define covariates for model
-
-## specify basic formula with birth year as random effect
-f1 <- as.formula(paste0(resp_var, " ~ ", 
-                        paste(covar, collapse = " + "))) 
-IM1  <- inla(f1, 
-               family = "gaussian",
-               data = spatial_FROH) 
-
-
-summary(IM1)
-
+  labs(x="Easting", y="Northing")
+Rum_mesh
 
 #################################################################################################
 ## setting up INLA model ########################################################################
@@ -69,24 +81,24 @@ summary(IM1)
 
 #set weighting using A matrix
 
-Locations=cbind(spatial_FROH$E, spatial_FROH$N)#locations of ids
+Locations=cbind(spatial_FROH$X, spatial_FROH$Y)#locations of ids
 
 
-A=inla.spde.make.A(mesh, loc=Locations)
+A=inla.spde.make.A(Mesh, loc=Locations)
 
 
 #define SPDE 
 
-spde=inla.spde2.matern(mesh, alpha = 2) # would need to adjust for time series data
+spde=inla.spde2.matern(Mesh, alpha = 2) # would need to adjust for time series data
 
 #define spatial field
 
 w.index=inla.spde.make.index(name = 'w', n.spde=spde$n.spde, n.group = 1, n.repl = 1)
 
 #make model matrix
-Xm=model.matrix(~-1 + BirthYear, data = spatial_FROH)
-X=data.frame(BirthYear=Xm[,1])
-
+Xm=model.matrix(~-1 + year_cont, data = spatial_FROH)
+X=data.frame(year_cont=Xm[,1])
+head(X)
 
 N <- nrow(spatial_FROH)
 
@@ -102,9 +114,12 @@ stackfit=inla.stack(
 
 
 
+
+
 # define model formula
 
-Fspat=as.formula(paste0("y ~ -1 + Intercept + ", paste0(colnames(X), collapse = " + "), "+ f(w, model=spde)"))
+Fspat=as.formula(paste0("y ~ -1 + Intercept + ", paste0(colnames(X), collapse = " + "), 
+                        " + f(w, model=spde)"))
 
 #run model
 IM_sp=inla(Fspat,
@@ -119,17 +134,40 @@ IM_sp=inla(Fspat,
 summary(IM_sp)
 
 
-SpatialList <- list(IM1, IM_sp)
+## now fitting spde and birth year as random effects 
+# have to re-do the stack
+stackfit2=inla.stack(
+  data=list(y=spatial_FROH$FROH), 
+  A = list(1, 1, A), 
+  effects=list(
+    Intercept=rep(1, N), 
+    BirthYear = spatial_FROH$BirthYear, # insert vectors of any random effects
+    w=w.index)
+)
 
-INLADICFig(SpatialList, ModelNames = c("Base","SPDE"))
+
+Fspat2=as.formula(paste0("y ~ -1 + Intercept + f(BirthYear, model = 'iid') + f(w, model=spde) "))
+
+#run model
+IM_sp2=inla(Fspat2,
+           family = "gaussian", 
+           data=inla.stack.data(stackfit2), 
+           control.compute = list(dic=TRUE),
+           control.predictor = list(
+             A=inla.stack.A(stackfit))#, verbose = TRUE
+           
+)
+
+summary(IM_sp2)
 
 
-ggField(IM_sp, mesh)
-
-IM_sp$
 
 
-IM_sp$Spatial$Model %>%
-  ggField(IM_sp$Spatial$Mesh, Points = IM_sp$Data[,c("X", "Y")],
-          PointAlpha = 0.1) +
-  scale_fill_discrete_sequential(palette = AlberPalettes[[1]])
+## check whether DIC decreases with SPDE 
+SpatialList <- list(IM1, IM2, IM_sp, IM_sp2)
+sapply(SpatialList, function(f) f$dic$dic)
+INLADICFig(SpatialList, ModelNames = c("IM1","IM2" ,"SPDE_1","SPDE_2"))
+
+
+ggField(IM_sp2, Mesh, Fill = "Continuous")
+

@@ -7,8 +7,8 @@ library(patchwork)
 setwd("H:/")
 
 
-FROH_id<-read.table("PhD_3rdYR/Data_files/ROH_output/ROH_search_UpdatedMb_01_2022.hom.indiv", header=T, stringsAsFactors = F)%>%
-dplyr::rename(Code=IID)%>%mutate(FROH=KB/2591865)
+FROH_id<-read.table("PhD_4th_yr/2023_ROH_search/2021_sleuthed_052023.hom.indiv", header=T, stringsAsFactors = F)%>%
+dplyr::rename(Code=IID)%>%mutate(FROH=KB/2591865)%>%filter(nchar(Code)==5)
 
 ## pull out most and lest inbred indivs
 tail_inbred=FROH_id%>%dplyr::arrange(FROH)%>%head(20)
@@ -24,20 +24,20 @@ top_bottom_nam=c(head_inbred_names,tail_inbred_names)
 
 sum(FROH_id$FROH>0)
 
-# > 3042/3045
-# [1] 0.9990148
+# > 3195/3198
+# [1] 0.9990619
 # 
 
 
 sum(FROH_id$FROH>=0.0625)
 
-# > 876/3045
-# [1] 0.2876847
+# > 1478/3198
+# [1] 0.4621639
 
 
 sum(FROH_id$FROH>=0.125)
-# > 55/3045
-# [1] 0.0180624
+# > 88/3198
+# [1] 0.0275172
 
 
 mean(FROH_id$FROH)
@@ -54,7 +54,7 @@ ggplot(FROH_id, aes(FROH))+
   geom_density(alpha=0.6,fill="#FF6666")+
   theme_bw()+
   geom_vline(aes(xintercept=mean(FROH)))+
-  geom_boxplot()
+  geom_rug()
   # geom_density_ridges(jittered_points = TRUE, 
   #                     position = position_points_jitter(height = 0),
   #                     point_shape = '|', point_size = 3, 
@@ -68,7 +68,7 @@ ggplot(FROH_id, aes(x=NSEG, y=KB))+
 
 ### seperate out ROH into lengths 
 
-FROH_full<-read.table("PhD_3rdYR/Data_files/ROH_output/ROH_search_UpdatedMb_01_2022.hom", header=T, stringsAsFactors = F)
+FROH_full<-read.table("PhD_4th_yr/2023_ROH_search/2021_sleuthed_052023.hom", header=T, stringsAsFactors = F)
 
 
 
@@ -99,7 +99,7 @@ num_grouped_chr_plot=ggplot(num_grouped_chr, aes(x=CHR, y=n, fill=sizeKB))+
   scale_fill_manual(values = c("darksalmon","mediumaquamarine", "deepskyblue4"))+
   labs(x="Chromosome (Size ordered)", y="Number of ROH", fill="ROH size category")+
   theme(legend.position=c(0.9,0.9))
-
+num_grouped_chr_plot
 
 ggsave(num_grouped_chr_plot, 
        file="PhD_4th_yr/Chapter_1/Figs/ROH_chr_size_ordered_new_cols.png", 

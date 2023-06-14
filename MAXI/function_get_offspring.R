@@ -9,10 +9,10 @@ library(data.table)
 
 
 
-db<-"C:\\Users\\s1881212\\Documents\\Deer_database_2022/RedDeer2.05.accdb" #open connection
+db<-"C:\\Users\\s1881212\\Documents\\Deer_database_2022/RedDeer2.05.1.accdb" #open connection
 con<-odbcConnectAccess2007(db)
 
-ped<-sqlFetch(con, "sys_Pedigree")%>%dplyr::select(Code, MumCode,Sire)
+ped<-sqlFetch(con, "sys_Pedigree")%>%dplyr::select(Code, MumCode,Sire, BirthYear)
 odbcClose(con) #close connection
 
 
@@ -60,6 +60,7 @@ get_offspring <- function(sire_name) {
 
 # all_individuals <- unique(ped$Code)
 #all_individuals <- c("MAXIS", "ROGER")
+setwd("H:/PHD 1st YR")
 all_individuals_2<-read.table("MAXI_gencont_stuff/IDsSires_numoffspring_1965_1975.txt", header = TRUE)%>%
   select(Code) #all individuals born between 1965-1975 loaded in 
 all_ids<-as.vector(unlist(all_individuals_2$Code))## to convert df to list by code
@@ -100,7 +101,7 @@ full_off_peryr[["MAXIS"]]
 ###############################################################################
 
 library(RODBC)
-db<-"C:\\Users\\s1881212\\Documents\\Deer database 07_2020\\RedDeer1.93.accdb"
+db<-"C:\\Users\\s1881212\\Documents\\Deer_database_2022/RedDeer2.05.1.accdb"
 con<-odbcConnectAccess2007(db)
 full_ped<-sqlFetch(con, "tbllife") %>% select(Code, BirthYear)
 odbcClose(con)
@@ -126,48 +127,48 @@ full_ped_joined<-map(full_off_peryr, join_func) ### this actually worked, more e
 ###########################################################################
 #### now to work out contribution #####################################
 
-contribution<- function(x){
-  x$cont<-NA
-for (i in 1:nrow(x)){
-  x$cont[i]<-(x$n[i]/x$full_cohort[i]) ## this is null
-  
-}
-}
-  
-contribution<-function(sire){
-  cont<-(sire)$n/(sire)$full_cohort 
-  
-  ## this gives correct numbers but not in a list
-  
-}
-
-map(full_ped_joined, contribution)
-
-
-
-
-fill<-n/full_cohort
-was<-Map(cbind, full_ped_joined, contriibution=fill)
-
-contr_func<-function(x){
-  x$conttrbution<-x$n/x$full_cohort 
-  
-  
-  ## this gives correct numbers but not in a list
-  
-}
-
-contribution<- function(x){
-    for (i in 1:nrow(x)){
-    x$cont[i]<-(x$n[i]/x$full_cohort[i]) ## this is null
-    
-  }
-}
-
-who<-map(full_ped_joined, contribution)
-
-
-maybe<-map(full_ped_joined, contr_func)
+# contribution<- function(x){
+#   x$cont<-NA
+# for (i in 1:nrow(x)){
+#   x$cont[i]<-(x$n[i]/x$full_cohort[i]) ## this is null
+#   
+# }
+# }
+#   
+# contribution<-function(sire){
+#   cont<-(sire)$n/(sire)$full_cohort 
+#   
+#   ## this gives correct numbers but not in a list
+#   
+# }
+# 
+# map(full_ped_joined, contribution)
+# 
+# 
+# 
+# 
+# fill<-n/full_cohort
+# was<-Map(cbind, full_ped_joined, contriibution=fill)
+# 
+# contr_func<-function(x){
+#   x$conttrbution<-x$n/x$full_cohort 
+#   
+#   
+#   ## this gives correct numbers but not in a list
+#   
+# }
+# 
+# contribution<- function(x){
+#     for (i in 1:nrow(x)){
+#     x$cont[i]<-(x$n[i]/x$full_cohort[i]) ## this is null
+#     
+#   }
+# }
+# 
+# who<-map(full_ped_joined, contribution)
+# 
+# 
+# maybe<-map(full_ped_joined, contr_func)
 
 
 #### need to fix this ::
@@ -199,18 +200,24 @@ for (i in 1:nrow(un)){
 
 
 library(ggplot2)
-ggplot(un, aes(x = BirthYear, y = contribution, colour = "Name")) + geom_line() +
-  labs(x = "Cohort year", y = "Genealogical contribution", title = "Proportion of cohorts genetically decendent from MAXI (1974 - 2019)") +
-  theme_bw()
 
-
-ggplot(un, aes(x = BirthYear, y = contribution)) + 
-  geom_line(aes(linetype = Name))+
-  theme(legend.position = "none")
-
-
-ggplot(un, aes(x=BirthYear, y=contribution, group = Name, colour = Name)) +
+maxi=ggplot(un, aes(x=BirthYear, y=contribution, group = Name, colour = Name)) +
   geom_line() +
-  theme(legend.position = "none")
+  theme_bw()+
+  theme(legend.position = "none",
+        axis.title.x = element_text(size = 15), 
+        axis.text.y = element_text(size=10), 
+        axis.title.y = element_text(size = 12),
+        axis.text.x = element_text(size=12))+
+  labs(x="Cohort", y="Contribution of sire as a proportion of the population", title = "Contribution of sires born between 1965-1975")+
+  xlim(c(1973,2022))
 
-  geom_point( size=4, shape=21, fill="white")
+maxi
+
+setwd("H:/")
+
+ggsave(maxi,
+       file="PhD_4th_yr/Chapter_1/Figs/MAXI.png",
+       width = 8,
+       height = 6)
+

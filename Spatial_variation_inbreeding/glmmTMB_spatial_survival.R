@@ -1,6 +1,8 @@
 library(tidyverse)
 library(glmmTMB)
 library(ggeffects)
+library(patchwork)
+library(emmeans)
 
 setwd("H:/")
 
@@ -43,65 +45,39 @@ summary(surv_reg_fixed)
 ## plot showing difference in survival across regions 
 plot(ggpredict(surv_reg_fixed, terms = c("Reg")))
 
-### survival differs across regions 
-
-surv_FROH=update(suv_model_simple, ~ . + FROH )
-summary(surv_FROH)
-
-surv_model_mumFROH=update(surv_FROH, ~ . + MumFROH )
-summary(surv_model_mumFROH)
-ggpredict(surv_model_mumFROH, terms = c("MumFROH"))
-
-
-surv_mumFROH_reg=update(surv_model_mumFROH, ~ . + (1|Reg))
-summary(surv_mumFROH_reg)
-ggpredict(surv_mumFROH_reg, terms = c("MumFROH"))
-
-
-surv_inter=update(suv_model_simple, ~ . + FROH+(MumFROH*Reg) )
-summary(surv_inter)
-FROH_pred=plot(ggpredict(surv_inter, terms = c("MumFROH[all]","Reg")))
-pred_mumFROH=(ggpredict(surv_inter, terms = c("MumFROH[all]","Reg")))
-
-ggplot(pred_mumFROH, aes(x=x,y=predicted, colour=group))+
-  geom_line()
-
-plot(ggpredict(surv_inter, terms = c("FROH","Reg")))
-
-## same with Fgrm
-
-surv_Fgrm=update(suv_model_simple, ~ . + Fgrm)
-summary(surv_Fgrm)
-
-surv_model_mumFgrm=update(surv_Fgrm, ~ . + MumFgrm )
-summary(surv_model_mumFgrm)
-
-surv_mumFgrm_reg=update(surv_model_mumFgrm, ~ . + (1|Reg))
-summary(surv_mumFgrm_reg)
-
-surv_inter_fgrm=update(suv_model_simple, ~ . + Fgrm + (MumFgrm*Reg) )
-summary(surv_inter_fgrm)
-
-Fgrm_preed=plot(ggpredict(surv_inter_fgrm, terms = c("MumFgrm[all]","Reg")))
-
-library(patchwork)
-FROH_pred+Fgrm_preed
-
-
-
-
 
 #### compare region as fixed effect with 2 measures of inbreeding 
 
 surv_FROH1=update(suv_model_simple, ~ . + FROH +Reg)
 R1=plot(ggpredict(surv_FROH1, terms = c("FROH[all]","Reg")),show.title=FALSE, colors="metro", line.size=1)
+R1
+summary(surv_FROH1)
 
 surv_Fgrm1=update(suv_model_simple, ~ . + Fgrm +Reg)
 G1=plot(ggpredict(surv_Fgrm1, terms = c("Fgrm[all]","Reg")),show.title=FALSE, colors="metro", line.size=1)
+G1
+summary(surv_Fgrm1)
 
 A=R1+G1+plot_annotation(title = "Predicted survival with increasing id inbreeding coefficient") 
 ## shows that for both measures of inbreeding juvenile survival decreases at the same(ish) rate
+ 
+## could also assume an interaction between region and focal inbreeding 
+surv_FROH1_inter=update(suv_model_simple, ~ . + FROH *Reg)
+R1_I=plot(ggpredict(surv_FROH1_inter, terms = c("FROH[all]","Reg")),show.title=FALSE, colors="metro", line.size=1)
+R1_I
+summary(surv_FROH1_inter)
+FROH_trend=emtrends(surv_FROH1_inter, pairwise ~ Reg, var="FROH")
+test(FROH_trend$emtrends)
 
+surv_Fgrm1_inter=update(suv_model_simple, ~ . + Fgrm *Reg)
+G1_I=plot(ggpredict(surv_Fgrm1_inter, terms = c("Fgrm[all]","Reg")),show.title=FALSE, colors="metro", line.size=1)
+G1_I
+summary(surv_Fgrm1_inter)
+emm1.2 = emmeans(surv_Fgrm1_inter, specs = pairwise ~ Reg)
+emm1.2$contrasts
+
+A_I=R1_I+G1_I+plot_annotation(title = "Predicted survival with increasing id inbreeding coefficient (interaction of inbreeding and region)") 
+## shows that for both measures of inbreeding juvenile survival decreases at the same(ish) rate
 
 surv_FROH2=update(suv_model_simple, ~ . + FROH +MumFROH)
 R2=plot(ggpredict(surv_FROH2, terms = c("MumFROH[all]")),show.title=FALSE,  line.size=1)
@@ -129,14 +105,18 @@ C=R3+G3+plot_annotation(title = "Predicted survival with region as random effect
 
 
 surv_FROH4=update(suv_model_simple, ~ . + FROH +(Reg*MumFROH))
-R4=plot(ggpredict(surv_FROH4, terms = c("MumFROH[all]","Reg")),show.title=FALSE, colors="metro", line.size=1)
+R4=plot(ggemmeans(surv_FROH4, terms = c("MumFROH[all]","Reg")),show.title=FALSE, colors="metro", line.size=1)
 R4
 summary(surv_FROH4)
 
 surv_Fgrm4=update(suv_model_simple, ~ . + Fgrm +(Reg*MumFgrm))
-G4=plot(ggpredict(surv_Fgrm4, terms = c("MumFgrm[all]","Reg")), show.title=FALSE,colors="metro", line.size=1)
+G4=plot(ggemmeans(surv_Fgrm4, terms = c("MumFgrm[all]","Reg")), show.title=FALSE,colors="metro", line.size=1)
 G4
 summary(surv_Fgrm4)
+
+#pairwise comparisons
+emm1.1 = emmeans(surv_FROH4, specs = pairwise ~ MumFROH:Reg)
+emm1.1$contrasts
 
 
 D=R4+G4+plot_annotation(title = "Predicted survival with interaction between region (fixed) and Mother inbreeding coefficient")
@@ -152,7 +132,7 @@ D=R4+G4+plot_annotation(title = "Predicted survival with interaction between reg
 ## when treat regions as a fixed effect only it just eastimates the same gradient of mumFroh for all regions (obviously)
 
 
-D=R4+G4+plot_annotation(title = "Predicted survival with interaction between region (fixed) and Mother inbreeding coefficient")
+
 
 
 
@@ -178,11 +158,43 @@ ggsave(D,
        width = 10,
        height = 6)
 
+ggsave(A_I,
+       file = "PhD_4th_yr/Spatial_var_inbreeding/glmmTMB/survival_id_incIBC_inter_region.png",
+       width = 10,
+       height = 6)
+
+
 
 
 #check correlations of mum ibc in IM
-surv_loc_df%>%filter(Reg=="IM")%>%
+intermeiate=surv_loc_df%>%filter(Reg=="SG")#%>%
   ggplot(aes(MumFROH, MumFgrm))+
   geom_point()
-
+length(unique(check$MumCode))
+  
 cor(surv_loc_df$MumFROH, surv_loc_df$MumFgrm)
+
+##checking models fitted for each reg seperatly
+intermeiate=surv_loc_df%>%filter(Reg=="SG")#%>%
+
+suv_model_simple_intermed=glmmTMB(juvenile_survival~ Sex + MotherStatus + mum_age+mum_age_sq+FROH+
+                           (1|BirthYear)+(1|MumCode), 
+                         family=binomial, 
+                         data=intermeiate, 
+                         na.action = na.omit,
+)
+
+summary(suv_model_simple_intermed)
+##FROH not sig for SG but highly sig for IM
+
+plot(ggpredict(suv_model_simple_intermed, terms = c("FROH[all]")),show.title=FALSE,  line.size=1)
+
+### estimtes by hand to double check ####
+
+new_FROH <- rnorm(nrow(surv_loc_df), mean(surv_loc_df$FROH), sd(surv_loc_df$FROH))
+new_mumFROH <- rnorm(nrow(surv_loc_df), mean(surv_loc_df$MumFROH), sd(surv_loc_df$MumFROH))
+new_
+
+head(surv_loc_df)
+
+?rnorm

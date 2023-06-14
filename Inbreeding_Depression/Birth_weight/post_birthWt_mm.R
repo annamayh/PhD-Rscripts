@@ -38,26 +38,21 @@ FROH_sols$CHR<-as.factor(FROH_sols$CHR)
 forest=ggplot(data=FROH_sols, aes(x=CHR, y=solution, ymin=CI_lower, ymax=CI_upper)) +
   geom_pointrange(colour="grey50") + #plots lines based on Y and lower and upper CI
   geom_hline(yintercept=0, lty=2) +  # black line is 0
-  geom_hline(yintercept=FROH_sum_sol, lty=1,colour="red") + ## red line is the average effect of all chromosomes 
   coord_flip() +  # flip coordinates (puts labels on y axis)
   labs(x="Chromosome", y="Posterior estimate + CI", title = "Deviation of chromosomal inbreeding \neffects from combined effect\nof all chromosomes") +
   theme_classic()+  # use a white background                 
   theme(legend.position = "none")+
   ## line of FROHsum estimate
   annotate("segment", x = 0, xend = 34, y = FROH_sum_sol, yend = FROH_sum_sol, colour = "red", alpha=0.6)+
-  ##add in estimate of FROHsum
+    ##add in estimate of FROHsum
   annotate("pointrange", x = 34, y = FROH_sum_sol, ymin = FROH_sum_hu_upr, ymax = FROH_sum_hu_lwr,
            colour = "red", linewidth = 1, alpha=0.5, size=0.2)+
-  annotate("segment", x = 35, xend = 35, y = 0, yend = FROH_sum_sol, colour = "red", alpha=0.5, linewidth=1)+
-  #two lines between sig line 
-  annotate("segment", x = 35, xend = 34.5, y = 0,  yend=0, colour = "red", alpha=0.5, linewidth=1)+
-  annotate("segment", x = 35, xend = 34.5, y = FROH_sum_sol, yend = FROH_sum_sol, colour = "red", alpha=0.5, linewidth=1)+
   ##significance of FROHsum
-  geom_text(aes(x=35.5, y=-0.05, label="***"), colour="red", alpha=0.5)+
-  expand_limits(x = 36)
+  geom_text(aes(x=34.5, y=-0.115, label="***"), colour="red", alpha=0.5)+
+  expand_limits(x = 35)
 
 
-
+forest
 
 ###############################################################################################################
 #########################################################################################
@@ -79,18 +74,15 @@ mean(birth_wt_df_na_rm$CaptureWt) ##this is what we are predicting
 
 
 ## finding means coefficients from df used 
-Sex=1#1=female 2=male
+Sex=1.5#1=female 2=male intercept is females 
 AgeHrs=median(birth_wt_df_na_rm$AgeHrs)#median is 24 hrs 
 mum_age=mean(birth_wt_df_na_rm$mum_age) #mean mum age in dataset
-mum_age_sq=mean(birth_wt_df_na_rm$mum_age_sq)
+mum_age_sq=mum_age^2
 
 
 ##also choose quantiles 
 ibc_qua=c(0,0.05,0.1,0.15,0.2,0.25,0.3)
  
-
-
-
 
 pred_ibcs=list()
 
@@ -134,7 +126,7 @@ chrind=pred_ibcs_all%>%arrange(CHR)%>%
   ggplot(aes(x=as.numeric(ibc),y=bw_prediction, group=as.factor(CHR), colour=as.factor(CHR)))+
   geom_line(linewidth=1)+
   theme_bw()+
-  labs(x=" Inbreeding coefficient", y="Capture weight prediction (kg)", title="Predicted capture weight assuming \nchromosme independence",colour="Chromosome" )
+  labs(x=" Inbreeding coefficient", y="Predicted capture weight (kg)", title="Predicted capture weight assuming \nchromosme independence",colour="Chromosome" )
 
 chrind
 
@@ -145,7 +137,7 @@ chrind
 ### now assumung indiv is inbred by same amount on all chromosomes
 # plus CIs
 
-Sex=2
+Sex=1.5
 
 
 inter=as.data.frame(birth_wt_model$Sol)%>%dplyr::select(matches("Interc"))
@@ -176,7 +168,6 @@ chr_sols=as.matrix(chr_sols)
 
 head(chr_sols)
 
-
 pred_nonind=list()
 for(v in 1:length(ibc_qua)){
   
@@ -188,20 +179,13 @@ for(v in 1:length(ibc_qua)){
       
     }else{
     FROHsum_sol=FROHsumest*ibc*33
-  
-    sols_mult_ibc=chr_sols*ibc
-    sols_mult_ibc=sols_mult_ibc+FROHsum_sol
-    
-    sum_chrs=rowSums(sols_mult_ibc)
-    
-    
-    all_its=sum_chrs+all_effects
+    all_its=FROHsum_sol+all_effects
     }
     
     
-    mean=mean(all_its)
-    quantU=quantile(all_its, prob=c(0.975)) 
-    quantL=quantile(all_its, prob=c(0.025)) 
+    mean=apply(all_its, 2, mean)
+    quantU=apply(all_its, 2, quantile,0.975)
+    quantL=apply(all_its, 2, quantile,0.025) 
     
     
     pred_mat=matrix(c(mean,quantU,quantL,(paste0(round(ibc, digits = 4)))), nrow=1, ncol=4)
@@ -217,21 +201,19 @@ pred_ibcs_mean=do.call(rbind.data.frame,pred_nonind)
 names(pred_ibcs_mean)<-c("Mean","upperCI","lowerCI","ibc")
 pred_ibcs_mean <- sapply(pred_ibcs_mean, as.numeric)%>%as.data.frame()
 
-
-
 chrnonind=ggplot(data=pred_ibcs_mean,aes(x=ibc,y=Mean))+
   geom_line(linewidth=1)+
   theme_bw()+
-  labs(x="Inbreeding coefficient", y="Predicted Capture weight", title="Predicted capture weight (kg) assuming \nequal inbreeding on all chromosomes")+
+  labs(x="Inbreeding coefficient", y="Predicted Capture weight (kg)", title="Predicted capture weight assuming \nequal inbreeding on all chromosomes")+
   geom_ribbon(aes(ymin = lowerCI, ymax = upperCI), alpha = 0.1)
 
 chrnonind
 
 #library(patchwork)
 
-Bw_3in1=forest+chrnonind+chrind+plot_annotation(tag_levels = 'A')
+Bw_3in1=chrnonind+forest+chrind+plot_annotation(tag_levels = 'A')
 
-
+Bw_3in1
 
 ggsave(Bw_3in1,
        file = "PhD_4th_yr/Inbreeding_depression_models/birth_weight/all3_birthweight.png",
