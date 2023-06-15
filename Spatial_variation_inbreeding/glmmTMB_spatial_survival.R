@@ -44,7 +44,7 @@ surv_reg_fixed=update(suv_model_simple, ~ . + Reg)
 summary(surv_reg_fixed)
 ## plot showing difference in survival across regions 
 plot(ggpredict(surv_reg_fixed, terms = c("Reg")))
-
+ggpredict(surv_reg_fixed, terms = c("Reg"))
 
 #### compare region as fixed effect with 2 measures of inbreeding 
 
@@ -66,8 +66,10 @@ surv_FROH1_inter=update(suv_model_simple, ~ . + FROH *Reg)
 R1_I=plot(ggpredict(surv_FROH1_inter, terms = c("FROH[all]","Reg")),show.title=FALSE, colors="metro", line.size=1)
 R1_I
 summary(surv_FROH1_inter)
+ggpredict(surv_FROH1_inter, terms = c("FROH[all]","Reg"))
 FROH_trend=emtrends(surv_FROH1_inter, pairwise ~ Reg, var="FROH")
 test(FROH_trend$emtrends)
+
 
 surv_Fgrm1_inter=update(suv_model_simple, ~ . + Fgrm *Reg)
 G1_I=plot(ggpredict(surv_Fgrm1_inter, terms = c("Fgrm[all]","Reg")),show.title=FALSE, colors="metro", line.size=1)
