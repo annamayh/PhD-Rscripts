@@ -11,7 +11,7 @@ surv_loc_df=read.table("PhD_4th_yr/Spatial_var_inbreeding/survival_loc.txt", sep
 surv_loc_df_study_area=surv_loc_df%>%
   filter(!E>1385)%>%
   filter(!N<7997.5) %>%#removing ids with no known region or ~10 ids with outside the limits of study area
-  dplyr::select(-BirthWt)%>%
+  dplyr::select(-MumFROH)%>%
   na.omit()
 
 table(surv_loc_df_study_area$MotherStatus)
@@ -35,7 +35,18 @@ table(surv_loc_df_study_area$Reg)
 ## model selection using INLA
 ############################################################################
 
-IM1  <- inla(juvenile_survival~Sex + MotherStatus + mum_age+mum_age_sq, 
+IM1.1  <- inla(juvenile_survival~Sex + MotherStatus + mum_age+mum_age_sq+Day_seq+BirthWt, 
+               family = "binomial",
+               data = surv_loc_df_study_area,
+               control.compute = list(dic=TRUE)) 
+
+
+summary(IM1.1)
+
+
+
+IM1  <- inla(juvenile_survival~Sex + MotherStatus + mum_age+mum_age_sq+Day_seq+BirthWt+
+               f(BirthYear, model = 'iid')+f(MumCode, model = 'iid'), 
              family = "binomial",
              data = surv_loc_df_study_area,
              control.compute = list(dic=TRUE)) 
@@ -43,19 +54,10 @@ IM1  <- inla(juvenile_survival~Sex + MotherStatus + mum_age+mum_age_sq,
 
 summary(IM1)
 
-IM1.1  <- inla(juvenile_survival~Sex + MotherStatus + mum_age+mum_age_sq+FROH, 
-             family = "binomial",
-             data = surv_loc_df_study_area,
-             control.compute = list(dic=TRUE)) 
-
-
-summary(IM1.1)
 
 
 
-
-
-IM2  <- inla(juvenile_survival~1+Sex + MotherStatus + mum_age+mum_age_sq+FROH+
+IM2  <- inla(juvenile_survival~1+Sex + MotherStatus + mum_age+mum_age_sq+Day_seq+FROH+BirthWt+
   f(BirthYear, model = 'iid')+f(MumCode, model = 'iid'), 
              family = "binomial",
              data = surv_loc_df_study_area,
@@ -66,9 +68,9 @@ summary(IM2)
 
 
 
-modelsel <- list(IM1, IM1.1, IM2)
+modelsel <- list(IM1.1,IM1, IM2)
 sapply(modelsel, function(f) f$dic$dic)
-INLADICFig(modelsel, ModelNames = c("IM1","IM1.1" ,"IM2"))
+INLADICFig(modelsel, ModelNames = c("IM1.1","IM1" ,"IM2"))
 
 
 
@@ -92,9 +94,16 @@ Rum_mesh=ggplot()+
   geom_point(aes(surv_loc_df_study_area$E, surv_loc_df_study_area$N, colour=surv_loc_df_study_area$Reg), alpha=0.5)+
   scale_colour_manual(values = c("#a20025","#00aba9","#60a917","chocolate1", "#647687","#f0a30a" ))+
   theme_classic()+
-  labs(x="Easting", y="Northing")
+  labs(x="Easting", y="Northing", colour="Region")+
+  theme(text = element_text(size = 18))
 Rum_mesh
 
+# ggsave(Rum_mesh,
+#        file = "PhD_4th_yr/Spatial_var_inbreeding/Chapter_wrting/plots/Rum_mesh.png",
+#        width = 7,
+#        height = 8, 
+#        dpi=300)
+# 
 
 
 Locations=cbind(surv_loc_df_study_area$E, surv_loc_df_study_area$N)#locations of ids
@@ -115,7 +124,9 @@ X0=data.frame(Intercept = rep(1, N),
              Sex = surv_loc_df_study_area$Sex, 
              MotherStatus = surv_loc_df_study_area$MotherStatus, 
              mum_age =surv_loc_df_study_area$mum_age,
-             mum_age_sq = surv_loc_df_study_area$mum_age_sq)
+             mum_age_sq = surv_loc_df_study_area$mum_age_sq, 
+             Day_seq=surv_loc_df_study_area$Day_seq, 
+             BirthWt=surv_loc_df_study_area$BirthWt)
 
 x=as.data.frame(X0)
 
@@ -132,7 +143,7 @@ stackfit=inla.stack(
 )
 
 
-IM_spde  <- inla(y~ -1 + Intercept+Sex + MotherStatus + mum_age+mum_age_sq+FROH+
+IM_spde  <- inla(y~ -1 + Intercept+Sex + MotherStatus + mum_age+mum_age_sq+Day_seq+FROH+BirthWt+
                    f(BirthYear, model = 'iid')+f(MumCode, model = 'iid')+ f(w, model=spde), 
                  family = "binomial",
                  data=inla.stack.data(stackfit), 
@@ -148,29 +159,18 @@ sapply(SpatialList, function(f) f$dic$dic)
 INLADICFig(SpatialList, ModelNames = c("IM1", "IM1.1", "IM2" ,"SPDE_1"))+theme_classic()
 
 
-ggField(IM_spde, Mesh)+
-  scale_fill_brewer(palette = "Reds", direction = -1)
+inla_surv_plot=ggField(IM_spde, Mesh)+
+  labs(tag="D", fill = "Juvenile survival \n(as untransformed \ndevaition from mean)")+
+  theme_bw()+
+  scale_fill_discrete_sequential(palette = "Oranges", rev=FALSE)+
+  theme(text = element_text(size = 18),
+        legend.title=element_text(size=rel(0.8)))
 
 
-fixed_spde=IM_spde$summary.fixed%>%rownames_to_column("Effect")
-fixed_spde$model="SPDE"
-
-fixed_IM=IM2$summary.fixed%>%rownames_to_column("Effect")
-fixed_IM$model="GLM"
-fixed_IM$Effect[fixed_IM$Effect == "(Intercept)"] <- "Intercept"
+inla_surv_plot
 
 
-compare=full_join(fixed_spde,fixed_IM)
 
-ggplot(data=compare, aes(x=model,y=mean, ymin=`0.025quant`, ymax=`0.975quant`))+
-  geom_pointrange(position=position_dodge(width = 1))+
-  facet_wrap(~Effect, scales = "free")+
-  geom_hline(yintercept = 0, linetype=2)
-
-compare%>%filter(Effect=="FROH")%>%
-ggplot(aes(x=model,y=mean, ymin=`0.025quant`, ymax=`0.975quant`))+
-  geom_pointrange(position=position_dodge(width = 1))+
-  geom_hline(yintercept = 0, linetype=2)
 
 
 

@@ -1,6 +1,5 @@
 library(RODBC)
 library(tidyverse)
-library(lubridate)
 
 db<-"C:\\Users\\s1881212\\Documents\\Deer_database_2022/RedDeer2.05.1.accdb" #open connection
 con<-odbcConnectAccess2007(db)
@@ -62,31 +61,23 @@ mum_loc_calf_yr=ave_N_E_calf_yr%>%
 year=life
 
 census_sep=last_cen%>%separate(LastSeen,into=c("YearLast","MonthLast","DayLast"),sep="-")%>%
-  dplyr::select(Code, YearLast, MonthLast)
+  dplyr::select(Code, YearLast)
 
 census_sep$YearLast=as.numeric(census_sep$YearLast)
 year_plus_census=year%>%right_join(census_sep)%>%
   mutate(yrs_since_last_Seen=(2023-YearLast))
 
 year_plus_census_check=year_plus_census%>%filter(is.na(DeathYear))%>%filter(!is.na(BirthYear))%>%
-  filter(BirthYear==YearLast&MonthLast<10)
+  filter(BirthYear==YearLast)
 
 ## for all ids with missing death years fill in estimated death year when havent been seen for at least 3 yrs 
 year_plus_census_filt=year_plus_census%>%filter(is.na(DeathYear))%>%
   mutate(DeathYear_est=YearLast+3)%>%
   filter(yrs_since_last_Seen>1)%>% #has to be more than 3 yrs scince its been seen to have an estimated death
   filter(DeathYear_est<2023)%>% 
-  dplyr::select(Code,DeathYear_est,YearLast, MonthLast)
+  dplyr::select(Code,DeathYear_est,YearLast)
 
-ids_before_winter=year%>%
-  filter(DeathMonth<10&DeathYear==BirthYear) #798 ids died before October the year they were born :(
-         
-ids_missing_before_winter=year_plus_census%>%
-  filter((is.na(DeathYear))&BirthYear==YearLast)#58
-
-year_plus_est_death=year%>%left_join(year_plus_census_filt)%>%##adding in an estimated death yr and year last seen for ids w/ no death year (not including ids born in the last 3 yrs )
-  anti_join(ids_before_winter, by = "Code")%>% #removing ids that died before October 
-  anti_join(ids_missing_before_winter, by = "Code") #removing ids that went missing before october (assumed dead)
+year_plus_est_death=year%>%left_join(year_plus_census_filt) ##adding in an estimated death yr and year last seen for ids w/ no death year (not including ids born in the last 3 yrs )
 
 
 year_plus_est_death$DeathMonth=as.numeric(year_plus_est_death$DeathMonth)
@@ -95,13 +86,15 @@ year_plus_est_death$DeathYear_est=as.numeric(year_plus_est_death$DeathYear_est)
 year_plus_est_death$BirthYear=as.numeric(as.character(year_plus_est_death$BirthYear))
 year_plus_est_death$YearLast=as.numeric(year_plus_est_death$YearLast)
 
-################################
-##calculate winter survival ####
-###############################
+# year_plus_est_death_check=year_plus_est_death%>%filter(is.na(DeathYear))%>%filter(!is.na(BirthYear))%>%
+#   filter(BirthYear==YearLast)
+
+
+
 year_winter=year_plus_est_death%>%
-  mutate(winter_survival = case_when(
+  mutate(first_year_survival = case_when(
     ((is.na(DeathYear)) & (BirthYear==YearLast))~"0",
-    #if died in same year born then winter surv=0 (have removed those that died before cct in lines 88)
+    #if died in same year born then juvenile surv=0
     (DeathYear==BirthYear) ~ "0", 
     #if died before May in 1st year of life 
     (DeathYear==(BirthYear+1))&(DeathMonth<5) ~ "0", 
@@ -109,10 +102,9 @@ year_winter=year_plus_est_death%>%
     (DeathYear==(BirthYear+1))&(is.na(DeathMonth)) ~ "NA", 
   ) )%>%
   # all ids that didnt get a 0 for juvenile survival gets a 1 for successfully surviving 
-  mutate(winter_survival =replace_na(winter_survival,"1"))
+  mutate(first_year_survival =replace_na(first_year_survival,"1"))
 
-table(year_winter$winter_survival)
-    
+table(year_winter$first_year_survival)
 ##### ##################
 ## work out DOB cont ###
 ########################
@@ -128,27 +120,30 @@ DOBs=year_winter%>%select(Code, BirthDay, BirthMonth)%>%
 
 
 table(year_winter$DeathType)
-######################
-## remove shot ids ###
-######################
+
+
+
+table(year_winter$DeathType)
+
+
 winter_survival=year_winter%>%filter(DeathType!= "S"| is.na(DeathType))%>% #filter out ids that were shot
   filter(DeathType!= "A" | is.na(DeathType)) %>% #%>% ##filter out ids that were an accidental death
   filter(DeathType!= "D" | is.na(DeathType))%>% ## keeping NA death type
-  dplyr::select(Code, BirthYear, Sex, MumCode, winter_survival)
+  dplyr::select(Code, BirthYear, Sex, MumCode, first_year_survival)
 
-table(winter_survival$winter_survival)
+table(winter_survival$first_year_survival)
 
 # want to keep ids that were shot but also made it to adulthood 
-wint_shot=year_winter%>%filter(DeathType== "S"&winter_survival=="1")%>%
-  select(Code, BirthYear, Sex, MumCode, winter_survival)
+wint_shot=year_winter%>%filter(DeathType== "S"&first_year_survival=="1")%>%
+  select(Code, BirthYear, Sex, MumCode, first_year_survival)
 
 ## adding ids that survived to age 2 then were shot to the df
 winter_survival=winter_survival%>%rbind(wint_shot)
-table(winter_survival$winter_survival)
+table(winter_survival$first_year_survival)
 
 
-      
-      ## read in FROH values ##
+
+## read in FROH values ##
 
 setwd("H:/")
 
@@ -171,17 +166,17 @@ FROH_mum<-read.table("PhD_4th_yr/2023_ROH_search/2021_sleuthed_052023.hom.indiv"
 mum_loc_calf_yr$BirthYear=as.numeric(as.character(mum_loc_calf_yr$BirthYear))
 
 winter_surv_reg_df=winter_survival%>%
-    left_join(mum_stat)%>%left_join(birth_wt)%>%
-    left_join(mum_birthyr)%>%
-    mutate(mum_age=BirthYear-mum_birthyear)%>%
-    mutate(mum_age_sq=mum_age^2)%>%
-    left_join(mum_loc_calf_yr)%>%
-    right_join(FROH_full)%>% ##only keeping ids we know FROH for 
-    left_join(FROH_mum)%>%
-    rename(N=N_calf_yr, E=E_calf_yr)%>%
-    left_join(DOBs)%>%
-    select(-mum_birthyear)#dont need mum birth yr in df anymore
-  
+  left_join(mum_stat)%>%left_join(birth_wt)%>%
+  left_join(mum_birthyr)%>%
+  mutate(mum_age=BirthYear-mum_birthyear)%>%
+  mutate(mum_age_sq=mum_age^2)%>%
+  left_join(mum_loc_calf_yr)%>%
+  right_join(FROH_full)%>%
+  right_join(FROH_mum)%>%
+  rename(N=N_calf_yr, E=E_calf_yr)%>%
+  left_join(DOBs)%>%
+  select(-mum_birthyear)#dont need mum birth yr in df anymore
+
 
 
 
@@ -194,15 +189,9 @@ LocToReg6 <- function(E, N) {
 
 
 winter_surv_reg_df$Reg <- with(winter_surv_reg_df, LocToReg6(E, N))
-
-
-
-
-
-
-
+##note this code was written thinking winter = first year survival hence the weird df names 
+## rest assured it is juvenile survival 
 write.table(winter_surv_reg_df,
-            file = "PhD_4th_yr/Spatial_var_inbreeding/winter_survival_loc.txt",
+            file = "PhD_4th_yr/Spatial_var_inbreeding/first_year_survival_loc.txt",
             row.names = F, quote = F, sep = ",",na = "NA") #saving tables as txt file 
-
 

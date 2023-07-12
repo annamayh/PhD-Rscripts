@@ -7,7 +7,7 @@ db<-"C:\\Users\\s1881212\\Documents\\Deer_database_2022/RedDeer2.05.1.accdb" #op
 con<-odbcConnectAccess2007(db)
 
 mum_stat<-sqlFetch(con, "sys_HindStatusAtConception") %>%dplyr::select(-CalfBirthYear)%>%dplyr::rename(MumCode=Mum, Code=Calf)
-ped<-sqlFetch(con, "sys_Pedigree")%>%dplyr::select(Code, BirthYear, MumCode)
+#ped<-sqlFetch(con, "sys_Pedigree")%>%dplyr::select(Code, BirthYear, MumCode)
 census<-sqlFetch(con, "tblCensus")%>%dplyr::select(Date,Code,Northing,Easting)
 
 mum_birthyr<-sqlFetch(con, "tbllife")%>%dplyr::select(Code,BirthYear)%>%dplyr::rename(mum_birthyear=BirthYear,MumCode=Code)
@@ -48,13 +48,13 @@ ave_N_E_calf_yr=ave_N_E_yr_split%>% #creating a new variable 'pseudo year' which
 #now to join location info to calf and add in FROH 
 
 ave_N_E_calf_yr$pseudo_calf_yr=as.factor(ave_N_E_calf_yr$pseudo_calf_yr)
-ped$BirthYear=as.factor(ped$BirthYear)
+life$BirthYear=as.factor(life$BirthYear)
 
 
 mum_loc_calf_yr=ave_N_E_calf_yr%>%
   rename(MumCode=Code, BirthYear=pseudo_calf_yr)%>% #so we get the average location of the mum during the birth year of the calf
-  inner_join(ped)%>%
-  select(-BirthYear)
+  inner_join(life)%>%
+  select(Code, MumCode, BirthYear, N_calf_yr, E_calf_yr)
 
 
 #################################################################################################
@@ -82,11 +82,11 @@ year_plus_census_filt=year_plus_census%>%filter(is.na(DeathYear))%>%
 year_plus_est_death=year%>%left_join(year_plus_census_filt) ##adding in an estimated death yr and year last seen for ids w/ no death year (not including ids born in the last 3 yrs )
 
 
-year_plus_est_death$DeathMonth=as.numeric(year_plus_est_death$DeathMonth)
-year_plus_est_death$DeathYear=as.numeric(year_plus_est_death$DeathYear)
-year_plus_est_death$DeathYear_est=as.numeric(year_plus_est_death$DeathYear_est)
-year_plus_est_death$BirthYear=as.numeric(year_plus_est_death$BirthYear)
-year_plus_est_death$YearLast=as.numeric(year_plus_est_death$YearLast)
+#year_plus_est_death$DeathMonth=as.numeric((year_plus_est_death$DeathMonth))
+year_plus_est_death$DeathYear=as.numeric(as.character(year_plus_est_death$DeathYear))
+year_plus_est_death$DeathYear_est=as.numeric(as.character(year_plus_est_death$DeathYear_est))
+year_plus_est_death$BirthYear=as.numeric(as.character(year_plus_est_death$BirthYear))
+year_plus_est_death$YearLast=as.numeric(as.character(year_plus_est_death$YearLast))
 
 # year_plus_est_death_check=year_plus_est_death%>%filter(is.na(DeathYear))%>%filter(!is.na(BirthYear))%>%
 #   filter(BirthYear==YearLast)
@@ -110,6 +110,20 @@ year_juve=year_plus_est_death%>%
   ) )%>%
   # all ids that didnt get a 0 for juvenile survival gets a 1 for successfully surviving 
   mutate(juvenile_survival =replace_na(juvenile_survival,"1"))
+
+
+##### ##################
+## work out DOB cont ###
+########################
+
+# first birth date is 30th/4
+# Last is 10th Oct
+day_seq=read.csv("PhD_4th_yr/Inbreeding_depression_models/date_seq.csv", header = TRUE)
+head(day_seq)
+DOBs=year_juve%>%select(Code, BirthDay, BirthMonth)%>%
+  left_join(day_seq)%>% ## sequences of day starting at 30th April 
+  select(Code, Day_seq)
+
 
 
 table(year_juve$DeathType)
@@ -151,11 +165,8 @@ FROH_mum<-read.table("PhD_4th_yr/2023_ROH_search/2021_sleuthed_052023.hom.indiv"
   filter(nchar(MumCode)==5)%>% #removing IDs with non-sensical ID codes
   select(-KB)
 
-# FROH_loc_df=mum_loc_calf_yr%>%right_join(FROH_full)%>%
-#   right_join(juvenile_surv)%>%
-#   rename(N=N_calf_yr, E=E_calf_yr)%>%
-#   na.omit()# %>%#removng all ids where mum / mum loctation no known ~250 ids from dataset
-#   mutate(year_cont=BirthYear-min(BirthYear)) 
+mum_loc_calf_yr$BirthYear=as.numeric(as.character(mum_loc_calf_yr$BirthYear))
+
 
 surv_loc_df=juvenile_surv%>%
     left_join(mum_stat)%>%left_join(birth_wt)%>%
@@ -163,10 +174,11 @@ surv_loc_df=juvenile_surv%>%
     mutate(mum_age=BirthYear-mum_birthyear)%>%
     mutate(mum_age_sq=mum_age^2)%>%
     left_join(mum_loc_calf_yr)%>%
-    right_join(FROH_full)%>%
-    right_join(FROH_mum)%>%
+    left_join(FROH_full)%>%
+    left_join(FROH_mum)%>%
     rename(N=N_calf_yr, E=E_calf_yr)%>%
-    select(-mum_birthyear)#dont need mum birth yr in df anymore
+    left_join(DOBs)%>%
+      select(-mum_birthyear)#dont need mum birth yr in df anymore
   
 
 
