@@ -55,7 +55,9 @@ surv_forest=ggplot(data=FROH_sols, aes(x=CHR, y=solution, ymin=CI_lower, ymax=CI
            colour = "red", linewidth = 1, alpha=0.5, size=0.2)+
   ##significance of FROHsum
   geom_text(aes(x=34.5, y=-0.29, label="***"), colour="red", alpha=0.5)+
-  expand_limits(x = 35)
+  expand_limits(x = 35)+
+  theme(text = element_text(size = 18), plot.title = element_text(size=13), axis.text.y = element_text(size=10))
+
 
 surv_forest
 
@@ -69,7 +71,7 @@ surv_forest
 
 sum(FROH_sols$solution)
 
-Sex=2#1=female 2=male good to just take average 
+Sex=1.5#1=female 2=male good to just take average 
 mum_age=mean(juvenile_surv_df_na_rm$mum_age)
 mum_age_sq=mum_age^2
 ibc=0.125
@@ -177,7 +179,8 @@ suvr_pred_independent=ggplot(data=pred_survival_ind_chr,aes(x=ibc,y=mean_surv_pr
     geom_line(linewidth=1)+
     theme_bw()+
     labs(x="Inbreeding Coefficient", y="Predicted survival", 
-         colour="Chromosome", title="Predicted survival assuming chromosome independence", tag = "C")
+         colour="Chromosome", title="Predicted survival assuming chromosome independence", tag = "C")+
+  theme(text = element_text(size = 18), plot.title = element_text(size=13), legend.title = element_text(size=14), legend.text = element_text(size=12))
 
 suvr_pred_independent
 
@@ -239,11 +242,13 @@ survival_transformed=list()
 pred_survival_nonind_chr <- sapply(pred_all, as.numeric)%>%as.data.frame()
 
 combined_chr=ggplot(data=pred_survival_nonind_chr,aes(x=ibc,y=mean_surv_prediction))+
-  geom_line(size=1)+
+  geom_line(linewidth=1)+
   theme_bw()+
   labs(x="Inbreeding coefficient", y="Predicted survival", 
        title="Predicted survival assuming equal inbreeding \non all chromosomes",tag = "A")+
-  geom_ribbon(aes(ymin = CI_lwr, ymax = CI_upr), alpha = 0.3)
+  geom_ribbon(aes(ymin = CI_lwr, ymax = CI_upr), alpha = 0.3)+
+  theme(text = element_text(size = 18), plot.title = element_text(size=13))
+
 
 combined_chr
 

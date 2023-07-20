@@ -6,6 +6,9 @@ library(ggeffects)
 library(patchwork)
 library(emmeans)
 
+setwd("H:/")
+
+
 surv_loc_df=read.table("PhD_4th_yr/Spatial_var_inbreeding/survival_loc.txt", sep = ",", header = TRUE)%>%
   select(-BirthWt)
 
@@ -55,13 +58,15 @@ bw_reg=bw_pred%>%
 bw_reg
 
 
-bw_reg_inter=update(bw_model_simple, ~ . + Reg:FROH) ##just region as fixed effect
+bw_reg_inter=update(bw_model_simple, ~ . + Reg*FROH) ##just region as fixed effect
 summary(bw_reg_inter)
 
 bw_inter=plot(ggpredict(bw_reg_inter, terms = c("FROH[all]","Reg")),show.title=FALSE, colors="metro", line.size=1)+
-  labs(x = expression(F["ROH"]), y = "Birth weight (kg)", colour = "Spatial region")+
+  labs(x = expression(F["ROH"]), y = "Birth weight (kg)", colour = "Spatial \nregion")+
   theme(text = element_text(size = 15)) 
 bw_inter
+
+ggpredict(bw_reg_inter, terms = c("FROH[all]","Reg"))
 
 FROH_trend=emtrends(bw_reg_inter, pairwise ~ Reg, var="FROH")
 test(FROH_trend$emtrends)

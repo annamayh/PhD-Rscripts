@@ -9,7 +9,6 @@ juvenile_surv_df=read.table("PhD_4th_yr/Inbreeding_depression_models/survival/AA
 head(juvenile_surv_df)
 
 juvenile_surv_df_na_rm=juvenile_surv_df%>%
-  filter(!Sex=="3")%>%
   select(-BirthWt)%>%
   na.omit() #remove all NAs quite a few for BW and mother stat
 ## change some variables to factors 
@@ -18,8 +17,6 @@ juvenile_surv_df_na_rm$Code=as.factor(juvenile_surv_df_na_rm$Code)
 juvenile_surv_df_na_rm$MumCode=as.factor(juvenile_surv_df_na_rm$MumCode)
 juvenile_surv_df_na_rm$MotherStatus=as.factor(juvenile_surv_df_na_rm$MotherStatus)
 juvenile_surv_df_na_rm$Sex=as.factor(juvenile_surv_df_na_rm$Sex)
-
-
 
 k<-100
 prior<-list(R=list(V=1,fix=1),
@@ -43,17 +40,15 @@ juvenile_surv_model<-MCMCglmm(juvenile_survival~1 + Sex + MotherStatus + FROHsum
                  nitt=300000,burnin=50000, thin = 100
                  )##
 
-
-
 # 200k finished in <20 mins 
 
 
 plot(juvenile_surv_model)
-
 #trace plots look good .. mum code a bit dodge?
 
 summary(juvenile_surv_model)
 
+save(juvenile_surv_model, juvenile_surv_df_na_rm, file="PhD_4th_yr/Inbreeding_depression_models/survival/juvenile_survival_model_output_exlBW.RData")
 
-save(juvenile_surv_model, juvenile_surv_df_na_rm, file="PhD_4th_yr/Inbreeding_depression_models/survival/juvenile_survival_model_output_full.RData")
+## have also run this model includng birth weight as a fixed effect, but lowers the sample size and doesnt change the results. 
 

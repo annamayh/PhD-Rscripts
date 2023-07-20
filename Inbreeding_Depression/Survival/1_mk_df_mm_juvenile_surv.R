@@ -7,30 +7,27 @@ library(RODBC)
 db<-"C:\\Users\\s1881212\\Documents\\Deer_database_2022/RedDeer2.05.1.accdb" #open connection
 con<-odbcConnectAccess2007(db)
 
-mum_birthyr<-sqlFetch(con, "tbllife")%>%dplyr::select(Code,BirthYear)%>%dplyr::rename(mum_birthyear=BirthYear,MumCode=Code)
-mum_stat<-sqlFetch(con, "sys_HindStatusAtConception") 
-mum_stat=mum_stat%>%dplyr::select(-CalfBirthYear)%>%dplyr::rename(MumCode=Mum, Code=Calf)
+mum_birthyr<-sqlFetch(con, "tbllife")%>%select(Code,BirthYear)%>%rename(mum_birthyear=BirthYear,MumCode=Code)
+#mum_stat<-sqlFetch(con, "sys_HindStatusAtConception") 
 birth_wt<-sqlFetch(con, "sys_BirthWt")%>%dplyr::select(BirthWt,Code)
 
 life<-sqlFetch(con, "tbllife") %>% 
   dplyr::select(Code, BirthDay,BirthMonth, BirthYear,DeathDay,DeathMonth,DeathYear, Sex, MumCode, DeathType)
-  # drop_na(BirthYear,DeathYear,DeathMonth,BirthMonth)%>%
-  # join(mum_birthyr)%>%mutate(mum_age=BirthYear-mum_birthyear)%>%
-  # join(mum_stat)%>%join(birth_wt)
-
 ped<-sqlFetch(con, "sys_Pedigree")%>%dplyr::select(Code, MumCode,Sire)
 
 cen=sqlFetch(con, "sys_LastCensusSighting")
 
 odbcClose(con)
 
+setwd("H:/")
+mum_stat=read.csv("PhD_4th_yr/Inbreeding_depression_models/hind_status_at_conception_download072022.csv", header = T, stringsAsFactors = F)%>%
+ select(-CalfBirthYear)%>%rename(MumCode=Mum, Code=Calf)
+
 ##################################
 #### calculating juvenile survival###
 ######################################
 
-
 ##based on last census sighting 
-
 year=life
 
 census_sep=cen%>%separate(LastSeen,into=c("YearLast","MonthLast","DayLast"),sep="-")%>%
@@ -82,15 +79,9 @@ year_juve=year_plus_est_death%>%
   # all ids that didnt get a 0 for juvenile survival gets a 1 for successfully surviving 
   mutate(juvenile_survival =replace_na(juvenile_survival,"1"))
   
-  
 
-  # 
-  # testing=year_juve%>%mutate(DeathYear_all=coalesce(DeathYear,DeathYear_est))%>%
-  #   mutate(diff=DeathYear_all-BirthYear)%>%filter(diff>=2)
-  
 table(year_juve$DeathType)
-  
-  
+ 
 juvenile_surv=year_juve%>%filter(DeathType!= "S"| is.na(DeathType))%>% #filter out ids that were shot
   filter(DeathType!= "A" | is.na(DeathType)) %>% #%>% ##filter out ids that were an accidental death
   filter(DeathType!= "D" | is.na(DeathType))%>% ## keeping NA death type
@@ -109,51 +100,43 @@ juvenile_surv=juvenile_surv%>%rbind(juvenile_surv_shot)
 table(juvenile_surv$juvenile_survival)
 
 
-# 
-# ## read in FROH values
+# ###########################
+# ## read in FROH values ####
+############################
 
-setwd("H:/")
+FROH<-read.table("PhD_4th_yr/2023_ROH_search/2021_sleuthed_052023.hom", header=T, stringsAsFactors = F)%>%
+  select(IID,CHR,KB) %>% rename(Code=IID)%>%filter(nchar(Code)==5)
 
-FROH<-read.table("PhD_4th_yr/2023_ROH_search/2021_calves_ROH_UpdatedSortedMb_032023.hom", header=T, stringsAsFactors = F)%>%
-  dplyr::select(IID,CHR,KB) %>% dplyr::rename(Code=IID)%>%filter(nchar(Code)==5)
-
-KB_perLG<-FROH%>%dplyr::group_by(Code, CHR)%>%
-  dplyr::summarise(KB_chr=sum(KB))%>%
+KB_perLG<-FROH%>%group_by(Code, CHR)%>%
+  summarise(KB_chr=sum(KB))%>%
   ungroup %>% 
   complete(Code, CHR, fill = list(KB_chr = 0)) #completes for all chromosomes 
 
-
 deermap <- read.csv("PhD_3rdYR/Data_files/Genome_assembly_mCerEla1.1.csv", header = T, stringsAsFactors = F)%>%
-  dplyr::filter(!CHR %in% c("All","All_auto","X","unplaced"))
+  filter(!CHR %in% c("All","All_auto","X","unplaced"))
 
 froh_per_chr<-plyr::join(KB_perLG,deermap)%>% mutate(chr_froh=KB_chr/length_Kb)%>%
-  dplyr::select(-length_Mb,-length)%>% reshape2::dcast(Code~CHR) %>% 
+  select(-length_Mb,-length)%>% reshape2::dcast(Code~CHR) %>% 
   mutate(FROHsum = rowSums(.[2:34]))%>%mutate(FROH_sum_div=FROHsum/33)
-
 
 colnames(froh_per_chr) <- c("Code", paste0("FROH_chr", 1:33),"FROHsum","FROH_sum_div")
 
-FROH_full<-read.table("PhD_4th_yr/2023_ROH_search/2021_calves_ROH_UpdatedSortedMb_032023.hom.indiv", header=T, stringsAsFactors = F)%>%
+FROH_full<-read.table("PhD_4th_yr/2023_ROH_search/2021_sleuthed_052023.hom.indiv", header=T, stringsAsFactors = F)%>%
   dplyr::select(IID,KB) %>% dplyr::rename(Code=IID)%>%mutate(FROH=KB/2591865)%>%filter(nchar(Code)==5)
 
 #combine all datasets to make a dataframe 
 
-
-
 juvenile_surv_df=juvenile_surv%>%
-  left_join(mum_stat)%>%left_join(birth_wt)%>%
-  left_join(mum_birthyr)%>%mutate(mum_age=BirthYear-mum_birthyear)%>%
-  right_join(froh_per_chr)%>%## only joining when ids have FROH values
+  left_join(mum_stat)%>%
+  left_join(birth_wt)%>%
+  left_join(mum_birthyr)%>%
+  mutate(mum_age=BirthYear-mum_birthyear)%>%
+  inner_join(froh_per_chr)%>%## only joining when ids have FROH values and juvenile surv values
   mutate(mum_age_sq=mum_age^2)%>%
-  select(-mum_birthyear)#dont need mum birth yr in df anymore
+  select(-mum_birthyear)%>%#dont need mum birth yr in df anymore
+  filter(!Sex=="3")
 ##some NAs in mum stat and birth weight
 
-
-table(juvenile_surv_df$juvenile_survival)
-# 
-# juvenile_surv_df_2=juvenile_surv_df%>%select(-mum_birthyear)%>% #removing birthwt from df cos not going to fit it this time and dont need mum birth yr
-#   #filter(!Sex=="3")%>%
-#   na.omit() 
 
 write.table(juvenile_surv_df,
             file = "PhD_4th_yr/Inbreeding_depression_models/survival/AA_juvenile_survival_df.txt",
