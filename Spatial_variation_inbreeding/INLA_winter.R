@@ -5,13 +5,13 @@ library(ggregplot)
 
 setwd("H:/")
 
-surv_loc_df=read.table("PhD_4th_yr/Spatial_var_inbreeding/survival_loc.txt", sep = ",", header = TRUE)
-  
+surv_loc_df=read.table("PhD_4th_yr/Spatial_var_inbreeding/winter_survival_loc.txt", sep = ",", header = TRUE)
+
 
 surv_loc_df_study_area=surv_loc_df%>%
   filter(!E>1385)%>%
   filter(!N<7997.5) %>%#removing ids with no known region or ~10 ids with outside the limits of study area
-  dplyr::select(-MumFROH)%>%
+  dplyr::select(-BirthWt)%>%
   na.omit()
 
 table(surv_loc_df_study_area$MotherStatus)
@@ -35,7 +35,7 @@ table(surv_loc_df_study_area$Reg)
 ## model selection using INLA
 ############################################################################
 
-IM1.1  <- inla(juvenile_survival~Sex + MotherStatus + mum_age+mum_age_sq+Day_seq, 
+IM1 <- inla(winter_survival~Sex + MotherStatus + mum_age+mum_age_sq+Day_seq, 
                family = "binomial",
                data = surv_loc_df_study_area,
                control.compute = list(dic=TRUE)) 
@@ -45,20 +45,20 @@ summary(IM1.1)
 
 
 
-IM1  <- inla(juvenile_survival~Sex + MotherStatus + mum_age+mum_age_sq+Day_seq+
+IM1.1  <- inla(winter_survival~Sex + MotherStatus + mum_age+mum_age_sq+Day_seq+
                f(BirthYear, model = 'iid')+f(MumCode, model = 'iid'), 
              family = "binomial",
              data = surv_loc_df_study_area,
              control.compute = list(dic=TRUE)) 
 
 
-summary(IM1)
+summary(IM1.1)
 
 
 
 
-IM2  <- inla(juvenile_survival~1+Sex + MotherStatus + mum_age+mum_age_sq+Day_seq+FROH+
-  f(BirthYear, model = 'iid')+f(MumCode, model = 'iid'), 
+IM2  <- inla(winter_survival~1+Sex + MotherStatus + mum_age+mum_age_sq+Day_seq+FROH+
+               f(BirthYear, model = 'iid')+f(MumCode, model = 'iid'), 
              family = "binomial",
              data = surv_loc_df_study_area,
              control.compute = list(dic=TRUE)) 
@@ -87,23 +87,7 @@ Mesh=inla.mesh.2d(loc.domain= rum_outline,
                   boundary=
                     inla.mesh.segment(rum_line_rev))
 
-plot(Mesh, asp=1)
-### plotting visual of mesh 
-Rum_mesh=ggplot()+
-  gg(Mesh)+
-  geom_point(aes(surv_loc_df_study_area$E, surv_loc_df_study_area$N, colour=surv_loc_df_study_area$Reg), alpha=0.5)+
-  scale_colour_manual(values = c("#a20025","#00aba9","#60a917","chocolate1", "#647687","#f0a30a" ))+
-  theme_classic()+
-  labs(x="Easting", y="Northing", colour="Region")+
-  theme(text = element_text(size = 18))
-Rum_mesh
 
-# ggsave(Rum_mesh,
-#        file = "PhD_4th_yr/Spatial_var_inbreeding/Chapter_wrting/plots/Rum_mesh.png",
-#        width = 7,
-#        height = 8, 
-#        dpi=300)
-# 
 
 
 Locations=cbind(surv_loc_df_study_area$E, surv_loc_df_study_area$N)#locations of ids
@@ -121,17 +105,17 @@ w.index=inla.spde.make.index(name = 'w', n.spde=spde$n.spde, n.group = 1, n.repl
 N <- nrow(surv_loc_df_study_area)
 X0=data.frame(Intercept = rep(1, N),
               FROH = surv_loc_df_study_area$FROH, 
-             Sex = surv_loc_df_study_area$Sex, 
-             MotherStatus = surv_loc_df_study_area$MotherStatus, 
-             mum_age =surv_loc_df_study_area$mum_age,
-             mum_age_sq = surv_loc_df_study_area$mum_age_sq, 
-             Day_seq=surv_loc_df_study_area$Day_seq)
+              Sex = surv_loc_df_study_area$Sex, 
+              MotherStatus = surv_loc_df_study_area$MotherStatus, 
+              mum_age =surv_loc_df_study_area$mum_age,
+              mum_age_sq = surv_loc_df_study_area$mum_age_sq, 
+              Day_seq=surv_loc_df_study_area$Day_seq)
 x=as.data.frame(X0)
 
 #make stack
 stackfit=inla.stack(
   tag="Fit",
-  data=list(y=surv_loc_df_study_area$juvenile_survival), 
+  data=list(y=surv_loc_df_study_area$winter_survival), 
   A = list(A, 1, 1, 1), #for the 6 fixed and random effects I have 
   effects=list(
     w=w.index,
@@ -157,19 +141,17 @@ sapply(SpatialList, function(f) f$dic$dic)
 INLADICFig(SpatialList, ModelNames = c("IM1", "IM1.1", "IM2" ,"SPDE_1"))+theme_classic()
 
 
-inla_surv_plot=ggField(IM_spde, Mesh)+
-  labs(fill = "Juvenile survival \n(as untransformed \ndevaition from mean)")+
+inla_winter_surv_plot=ggField(IM_spde, Mesh)+
+  labs(fill = "Winter survival \n(as untransformed \ndeviation from mean)")+
   theme_bw()+
-  scale_fill_discrete_sequential(palette = "Oranges", rev=FALSE)+
+  scale_fill_discrete_sequential(palette = "Reds", rev=FALSE)+
   theme(text = element_text(size = 18),
         legend.title=element_text(size=rel(0.8)))
 
 
-inla_surv_plot
+inla_winter_surv_plot
 
 
-save(inla_surv_plot, file="PhD_4th_yr/Spatial_var_inbreeding/Chapter_wrting/plots/INLA_juvenile_surv_plot.RData")
-
-
+save(inla_winter_surv_plot,surv_winter_reg, file="PhD_4th_yr/Spatial_var_inbreeding/Chapter_wrting/plots/winter_surv_plots.RData")
 
 

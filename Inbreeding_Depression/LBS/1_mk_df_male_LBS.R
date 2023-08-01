@@ -31,7 +31,7 @@ all_male_LBS[is.na(all_male_LBS)] <- 0 #males with no recorded sired ids given 0
 
 setwd("H:/")
 ###need to make this with updated map positions
-FROH<-read.table("PhD_4th_yr/2023_ROH_search/2021_calves_ROH_UpdatedSortedMb_032023.hom", header=T, stringsAsFactors = F)%>%
+FROH<-read.table("PhD_4th_yr/2023_ROH_search/2021_sleuthed_052023.hom", header=T, stringsAsFactors = F)%>%
   dplyr::select(IID,CHR,KB) %>% dplyr::rename(Code=IID)%>%filter(nchar(Code)==5)
 
 KB_perLG<-FROH%>%dplyr::group_by(Code, CHR)%>%
@@ -54,7 +54,6 @@ male_LBS_df=all_male_LBS%>%
   dplyr::select(-Sire, -DeathYear, -Sex, -DeathType)%>%
   na.omit()
 
-#842 male ids 
 
 write.table(male_LBS_df,
             file = "PhD_4th_yr/Inbreeding_depression_models/LBS/Male_LBS_df.txt",

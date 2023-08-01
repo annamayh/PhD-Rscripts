@@ -11,7 +11,7 @@ library(patchwork)
 
 setwd("H:/")
 
-load(file="PhD_4th_yr/Inbreeding_depression_models/LBS/Female_LBS_model_output_prior6_final.RData")
+load(file="PhD_4th_yr/Inbreeding_depression_models/LBS/Female_LBS_model_output_final.RData")
 load(file="PhD_4th_yr/Inbreeding_depression_models/LBS/Female_LBS_plots.RData")
 
 # crossed_hu=subset(female_LBS_df,LBS>0)
@@ -26,13 +26,13 @@ FROH_sum_hu_upr=summary(female_LBS_model)$solutions[4,2]
 FROH_sum_hu_lwr=summary(female_LBS_model)$solutions[4,3]
 
 
-sols_zi<-as.data.frame(female_LBS_model$Sol)%>%dplyr::select(matches("2):FROH_"))%>% ## taking out sols with FROH included
+sols_hu<-as.data.frame(female_LBS_model$Sol)%>%dplyr::select(matches("2):FROH_"))%>% ## taking out sols with FROH included
   dplyr::mutate(across(1:33, ~.x + FROH_sum_sol_hu)) ## adding FROHsum to chrFROH values
 
-names <- sols_zi %>% names ## gets names of all random variables, 2 = all down row
-sols<-apply(sols_zi,2,mean)#gets mean of all solutions i.e. the effect size of random effects 
-CI_upper<-apply(sols_zi,2,quantile,probs = c(0.975)) #gets upper confidence interval for all solutions 
-CI_lower<-apply(sols_zi,2,quantile,probs = c(0.025)) #gets lower CI for all solutions
+names <- sols_hu %>% names ## gets names of all random variables, 2 = all down row
+sols<-apply(sols_hu,2,mean)#gets mean of all solutions i.e. the effect size of random effects 
+CI_upper<-apply(sols_hu,2,quantile,probs = c(0.975)) #gets upper confidence interval for all solutions 
+CI_lower<-apply(sols_hu,2,quantile,probs = c(0.025)) #gets lower CI for all solutions
 
 Random_table<-tibble(sols,row.names=names)%>%add_column(CI_upper)%>%add_column(CI_lower)
 
@@ -49,12 +49,13 @@ female_LBS_hu=
   coord_flip() +  # flip coordinates (puts labels on y axis)
   labs(x="Chromosome", y="Posterior mean estimate + CI ",title = "Hurdle", tag = "B") +
   theme_classic()+  # use a white background                 
-  theme(legend.position = "none")+
+  theme(legend.position = "none", 
+        axis.title.x = element_text(size=10),text = element_text(size = 18),plot.title = element_text(size=14))+
   annotate("segment", x = 0, xend = 34, y = FROH_sum_sol_hu, yend = FROH_sum_sol_hu, colour = "mediumseagreen", alpha=0.6, linewidth=1)+
   ##add in estimate of FROHsum
   annotate("pointrange", x = 34, y = FROH_sum_sol_hu, ymin = FROH_sum_hu_upr, ymax = FROH_sum_hu_lwr,
            colour = "mediumseagreen", linewidth = 1, alpha=0.5, size=0.2)+
-  geom_text(aes(x=34.5, y=0.55, label="***"), colour="mediumseagreen", alpha=0.5)+
+  geom_text(aes(x=34.5, y=FROH_sum_sol_hu, label="*"), colour="mediumseagreen", alpha=0.5)+
   
   expand_limits(x = 35)
 
@@ -90,7 +91,8 @@ female_LBS_pois=
   coord_flip() +  # flip coordinates (puts labels on y axis)
   labs(x="Chromosome", y="Posterior mean estimate + CI ", title = "Truncated poisson") +
   theme_classic()+  # use a white background                 
-  theme(legend.position = "none")+
+  theme(legend.position = "none", axis.title.y = element_blank(),
+        axis.title.x = element_text(size=10),text = element_text(size = 18),plot.title = element_text(size=14))+
   annotate("segment", x = 0, xend = 34, y = FROH_sum_sol_pois, yend = FROH_sum_sol_pois, colour = "chocolate3", alpha=0.6, linewidth=1)+
   ##add in estimate of FROHsum
   annotate("pointrange", x = 34, y = FROH_sum_sol_pois, ymin = FROH_sum_pois_upr, ymax = FROH_sum_pois_lwr,
@@ -102,7 +104,7 @@ female_LBS_pois
 
 
 forest=(female_LBS_hu+female_LBS_pois)#+
-  plot_annotation(title = "Deviation of chromosomal inbreeding effects \nfrom combined effect of all chromosomes")
+  #plot_annotation(title = "Deviation of chromosomal inbreeding effects \nfrom combined effect of all chromosomes")
 
 forest
 
@@ -137,25 +139,25 @@ summary(female_LBS_model)
 # G-structure:  ~idh(trait):MumCode
 # 
 # post.mean  l-95% CI u-95% CI eff.samp
-# traitLBS.MumCode      0.01951 5.872e-11  0.05333     2218
-# traithu_LBS.MumCode   0.63096 2.507e-06  1.50856     1243
+# traitLBS.MumCode      0.01884 5.021e-08  0.05351     2189
+# traithu_LBS.MumCode   0.64525 1.911e-06  1.51912     1342
 # 
 # ~idh(trait):BirthYear
 # 
 # post.mean  l-95% CI u-95% CI eff.samp
-# traitLBS.BirthYear     0.004053 5.262e-10   0.0148     2500
-# traithu_LBS.BirthYear  5.378802 1.803e+00  10.0081     1154
+# traitLBS.BirthYear     0.004119 5.698e-11  0.01456     2500
+# traithu_LBS.BirthYear  5.265776 1.887e+00  9.64616     1079
 
 # R-structure:  ~idh(trait):units
 # 
 # post.mean l-95% CI u-95% CI eff.samp
-# traitLBS.units       0.1146  0.07061   0.1554     2500
-# traithu_LBS.units    1.0000  1.00000   1.0000        0
+# traitLBS.units       0.1154  0.07361    0.159     2500
+# traithu_LBS.units    1.0000  1.00000    1.000        0
+# 
 
+rand_var_hu=0.64525+5.265776+1.0000 ##variance estimatd for all radoms effects in zi
 
-rand_var_hu=0.63096+5.378802+1.0000 ##variance estimatd for all radoms effects in zi
-
-rand_var_pois=0.01951+0.004053+0.1146 ##variance estimatd for all radoms effects in pois
+rand_var_pois=0.01884+0.004119+0.1154 ##variance estimatd for all radoms effects in pois
 
 v=diag(c(rand_var_pois,rand_var_hu),2) ##assuming no covariance 
 
@@ -218,7 +220,11 @@ LBS_pred_independent=ggplot(data=LBS_female_all,aes(x=ibc,y=LBS, group=as.factor
   geom_line(linewidth=1)+
   theme_bw()+
   labs(x="Inbreeding Coefficient", y="Predicted LBS", 
-       colour="Chromosome", title="Predicted female LBS assuming chromosome independence",tag = "C")
+       colour="Chromosome", title="Predicted female LBS assuming \nchromosome independence",tag = "C")+
+  theme(text = element_text(size = 18), plot.title = element_text(size=13), 
+       legend.title = element_text(size=11), 
+       legend.text = element_text(size=9))
+
 
 LBS_pred_independent
 
@@ -249,25 +255,32 @@ LBS_trans
 ##############################################################
 ## now for all iterations to get 95% CIs ######################
 ###############################################################
-
-sol_pois<-as.data.frame(female_LBS_model$Sol)%>%dplyr::select(matches("tLBS:FROHsum"))## taking out sols with FROH included
-sol_zi<-as.data.frame(female_LBS_model$Sol)%>%dplyr::select(matches("hu_LBS:FROHsum"))## taking out sols with FROH included
 sol_inter_pois<-as.data.frame(female_LBS_model$Sol)%>%dplyr::select(("traitLBS"))## taking out sols with FROH included
-sol_inter_zi<-as.data.frame(female_LBS_model$Sol)%>%dplyr::select(("traithu_LBS"))## taking out sols with FROH included
+sol_inter_hu<-as.data.frame(female_LBS_model$Sol)%>%dplyr::select(("traithu_LBS"))## taking out sols with FROH included
+
+rands_pois=as.data.frame(female_LBS_model$VCV)%>%dplyr::select(matches("traitLBS"))
+rands_hu=as.data.frame(female_LBS_model$VCV)%>%dplyr::select(matches("traithu_LBS"))
 
 
+ibc_qua=c(0,0.05,0.1,0.15,0.2,0.25,0.3)
 LBS_transformed=list()
+
 
 for (c in 1:length(ibc_qua)){
   
   ibc=ibc_qua[c]
   LBS_sum=list()
   
-  for (row in 1:nrow(sol_pois)){
+  for (row in 1:nrow(sols_pois)){##for every iteration 
     
-    untrans_LBS_zi_sum=(sol_inter_zi[row,]+(ibc*sol_zi[row,]*33))#have to * 33 as FROHsum is sum of all 33 chrs 
-    untrans_LBS_pois_sum=(sol_inter_pois[row,]+(ibc*sol_pois[row,]*33))
-    mu=(c(untrans_LBS_pois_sum,untrans_LBS_zi_sum))
+    rand_var_hu=rands_hu[row,1]+rands_hu[row,2]+rands_hu[row,3] ##variance estimatd for radoms effects in zi: mum code, birth year and residual
+    rand_var_pois=rands_pois[row,1]+rands_pois[row,2]+rands_pois[row,3]  ##variance estimatd for all radoms effects in pois
+    v=diag(c(rand_var_pois,rand_var_hu),2) ##assuming no covariance 
+    
+    untrans_LBS_hu_sum=sum(sols_hu[row,]*ibc)+sol_inter_hu[row,]#sum of all chromosomal effects x inbreeding coefficient 
+    untrans_LBS_pois_sum=sum(sols_pois[row,]*ibc)+sol_inter_pois[row,]#sum of all chromosomal effects x inbreeding coefficient 
+    
+    mu=(c(untrans_LBS_pois_sum,untrans_LBS_hu_sum))
     
     LBS_trans=normal.hupooisson(mu,v)
     LBS_sum[[row]]=LBS_trans
@@ -282,7 +295,10 @@ for (c in 1:length(ibc_qua)){
   LBS_trans_mat=matrix(c(mean,CI_upper,CI_lower, paste0(ibc)),nrow = 1, ncol = 4)
   LBS_transformed[[c]]=LBS_trans_mat
   
+  print(paste0("Finished ibc = ",ibc))
+  
 }
+
 
 LBSsum_df=do.call(rbind.data.frame,LBS_transformed)
 colnames(LBSsum_df) <- c("LBS_mean","CI_upr","CI_lwr","ibc")
@@ -294,8 +310,11 @@ LBSsum_df <- sapply(LBSsum_df, as.numeric)%>%as.data.frame()
 LBS_pred_sum=ggplot(data=LBSsum_df,aes(x=ibc,y=LBS_mean))+
   geom_line(linewidth=1)+
   theme_bw()+
-  labs(x="Inbreeding Coefficient", y="Predicted LBS", title="Predicted female LBS assuming equal inbreeding", tag="A")+
-  geom_ribbon(aes(ymin = CI_lwr, ymax = CI_upr), alpha = 0.3)
+  labs(x="Inbreeding Coefficient", y="LBS", tag="A")+
+  geom_ribbon(aes(ymin = CI_lwr, ymax = CI_upr), alpha = 0.3)+
+  geom_point(data=female_LBS_df, aes(x=FROH_sum_div, y=LBS), inherit.aes = F, alpha=0.2)+
+  theme(text = element_text(size = 18), plot.title = element_text(size=13))
+  
 
 
 LBS_pred_sum
@@ -307,17 +326,29 @@ LBS_pred_sum
 
 library(patchwork)
 
-LBS_all3=(LBS_pred_sum|forest|LBS_pred_independent)
+# LBS_all3=(LBS_pred_sum|forest|LBS_pred_independent)
+# LBS_all3
+
+LBS_all3=(plot_spacer()+LBS_pred_sum+plot_spacer())/(plot_spacer()+forest|LBS_pred_independent+plot_spacer())
+
 LBS_all3
 
 ggsave(LBS_all3,
-       file = "PhD_4th_yr/Inbreeding_depression_models/LBS/Chapter_plots/female_LBS_all3.png",
-       width = 16,
-       height = 6)
+       file = "PhD_4th_yr/Inbreeding_depression_models/LBS/Chapter_plots/female_LBS_all3_with_points_reorder.png",
+       width = 18,
+       height = 12)
 
 
 
-#save(LBSsum_df, file="PhD_4th_yr/Inbreeding_depression_models/LBS/Female_LBS_plots.RData")
+
+# ggsave(LBS_all3,
+#        file = "PhD_4th_yr/Inbreeding_depression_models/LBS/Chapter_plots/female_LBS_all3.png",
+#        width = 16,
+#        height = 6)
+# 
+
+
+save(LBSsum_df,LBS_female_all, file="PhD_4th_yr/Inbreeding_depression_models/LBS/Female_LBS_plots.RData")
 
 
 #     

@@ -1,6 +1,7 @@
 library(tidyverse)
 library("MCMCglmm")
 library(data.table)
+library(beepr)
 
 setwd("H:/")
 
@@ -26,7 +27,7 @@ prior<-list(R=list(V=1,fix=1),
 
 
 
-juvenile_surv_model<-MCMCglmm(juvenile_survival~1 + Sex + MotherStatus + FROHsum + mum_age+mum_age_sq, #need to fit sum chrFROH  as continuous covariate,
+juvenile_surv_model<-MCMCglmm(juvenile_survival~1 + Sex + MotherStatus + FROHsum + mum_age+mum_age_sq+Day_seq, #need to fit sum chrFROH  as continuous covariate,
                  random= ~ 
                    idv(FROH_chr1+FROH_chr2+FROH_chr3+FROH_chr4+FROH_chr5+FROH_chr6+FROH_chr7+FROH_chr8+
                          FROH_chr9+FROH_chr10+FROH_chr11+FROH_chr12+FROH_chr13+FROH_chr14+FROH_chr15+FROH_chr16+
@@ -42,13 +43,14 @@ juvenile_surv_model<-MCMCglmm(juvenile_survival~1 + Sex + MotherStatus + FROHsum
 
 # 200k finished in <20 mins 
 
+beep(sound = 2)
 
 plot(juvenile_surv_model)
 #trace plots look good .. mum code a bit dodge?
 
 summary(juvenile_surv_model)
 
-save(juvenile_surv_model, juvenile_surv_df_na_rm, file="PhD_4th_yr/Inbreeding_depression_models/survival/juvenile_survival_model_output_exlBW.RData")
+save(juvenile_surv_model, juvenile_surv_df_na_rm, file="PhD_4th_yr/Inbreeding_depression_models/survival/A_juvenile_survival_model_output.RData")
 
 ## have also run this model includng birth weight as a fixed effect, but lowers the sample size and doesnt change the results. 
 

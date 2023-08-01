@@ -22,6 +22,7 @@ odbcClose(con) #close connection
 
 bw_df=surv_loc_df%>%full_join(birth_wt)%>%na.omit
 head(bw_df)
+table(bw_df$Reg)
 
 bw_df$Code=as.factor(bw_df$Code)
 bw_df$MumCode=as.factor(bw_df$MumCode)
@@ -30,8 +31,7 @@ bw_df$Sex=as.factor(bw_df$Sex)
 bw_df$Reg=as.factor(bw_df$Reg)
 
 
-
-bw_model_simple=glmmTMB(CaptureWt~ Sex + AgeHrs+ MotherStatus+
+bw_model_simple=glmmTMB(CaptureWt~ Sex + AgeHrs+ MotherStatus+mum_age+mum_age_sq+Day_seq+
                             (1|BirthYear)+ (1|MumCode), 
                           family=gaussian(), 
                           data=bw_df, 
@@ -44,7 +44,7 @@ summary(bw_model_simple)
 bw_reg_fixed=update(bw_model_simple, ~ . + Reg+FROH) ##just region as fixed effect
 summary(bw_reg_fixed)
 
-bw_pred=ggpredict(bw_reg_fixed, terms = c("Reg"))
+bw_pred=ggpredict(bw_reg_fixed, terms = c("Reg","AgeHrs[0]"))
 bw_pred
 
 bw_reg=bw_pred%>%
@@ -53,9 +53,38 @@ bw_reg=bw_pred%>%
   geom_pointrange(linewidth=1)+
   theme_bw()+
   scale_color_manual(values = c("#f0a30a" ,"#a20025","#00aba9","chocolate1","#60a917", "#647687"))+
-  labs(x="Spatial region", y="Birth Weight (kg)", tag="E")+
+  labs(x="Spatial region", y="Birth Weight (kg)")+
   theme(text = element_text(size = 18),legend.position = "none")
 bw_reg
+
+
+
+
+reg_pred_f=ggpredict(bw_reg_fixed, terms = c("Reg","Sex[1]","AgeHrs[0]"))%>%
+  mutate(x = fct_relevel(x, "SI", "IM", "LA", "NG","MG",  "SG"))
+
+reg_pred_m=ggpredict(bw_reg_fixed, terms = c("Reg","Sex[2]","AgeHrs[0]"))%>%
+  mutate(x = fct_relevel(x, "SI", "IM", "LA", "NG","MG",  "SG"))
+
+reg_pred=rbind(reg_pred_f,reg_pred_m)%>%
+  arrange(x)%>%na.omit()
+#%>%mutate(group="Juvenile survival")
+reg_pred
+
+bw_reg=reg_pred%>%
+  ggplot(aes(x=x, y=predicted, color=x, ymin=conf.low, ymax=conf.high, group=group))+
+  geom_pointrange(linewidth=1, position = position_dodge(width=0.5))+
+  theme_bw()+
+  scale_color_manual(values = c("#f0a30a" ,"#a20025","#00aba9","chocolate1", "#60a917","#647687"))+
+  labs(x="Spatial region", y="Predicted birth weight (kg)")+
+  theme(text = element_text(size = 18),legend.position = "none")
+bw_reg
+
+
+
+
+
+
 
 
 bw_reg_inter=update(bw_model_simple, ~ . + Reg*FROH) ##just region as fixed effect
@@ -69,8 +98,7 @@ bw_inter
 ggpredict(bw_reg_inter, terms = c("FROH[all]","Reg"))
 
 FROH_trend=emtrends(bw_reg_inter, pairwise ~ Reg, var="FROH")
-test(FROH_trend$emtrends)
-
+FROH_trend
 
 
 
@@ -137,7 +165,10 @@ X0=data.frame(Intercept = rep(1, N),
               Sex = bw_df$Sex, 
               MotherStatus=bw_df$MotherStatus, 
               AgeHrs=bw_df$AgeHrs, 
-              FROH=bw_df$FROH)
+              FROH=bw_df$FROH,
+              mum_age=bw_df$mum_age,
+              mum_age_sq=bw_df$mum_age_sq,
+              Day_seq=bw_df$Day_seq)
 
 x=as.data.frame(X0)
 
@@ -157,7 +188,7 @@ stackfit2=inla.stack(
 #define SPDE 
 
 
-IM_spde  <- inla(y~ -1 + Intercept+Sex + MotherStatus + AgeHrs+FROH+
+IM_spde  <- inla(y~ -1 + Intercept+Sex + MotherStatus + AgeHrs+FROH+mum_age+mum_age_sq+Day_seq+
                    f(BirthYear, model = 'iid')+f(MumCode, model = 'iid')+ f(w, model=spde), 
                  family = "gaussian",
                  data=inla.stack.data(stackfit2), 
@@ -173,12 +204,12 @@ List <- list(IM1, IM2, IM_spde)
 sapply(List, function(f) f$dic$dic)
 INLADICFig(List)
 
-
+library(colorspace)
 
 inla_bw_plot=ggField(IM_spde, Mesh)+
-  labs(tag="F", fill = "Birth weight (kg) \n(as deviation \nfrom mean)")+
+  labs(fill = "Birth weight (kg) \n(as deviation \nfrom mean)")+
   theme_bw()+
-  scale_fill_discrete_sequential(palette = "Greens", rev=FALSE)+
+  scale_fill_discrete_sequential(palette = "Burg", rev=FALSE)+
   theme(text = element_text(size = 18),
         legend.title=element_text(size=rel(0.8)))
 
@@ -192,6 +223,7 @@ inla_bw_plot
 bw=bw_reg+inla_bw_plot
 bw
 
+save(inla_bw_plot,bw_reg, file="PhD_4th_yr/Spatial_var_inbreeding/Chapter_wrting/plots/Birthweight_plots.RData")
 
 
 # ggsave(bw,
@@ -201,8 +233,8 @@ bw
 #        dpi=1000)
 
 
-big=inla_and_glmm/inla_and_reg/bw
-big
+# big=inla_and_glmm/inla_and_reg/bw
+# big
 
 ggsave(big,
        file = "PhD_4th_yr/Spatial_var_inbreeding/Chapter_wrting/plots/all.png",

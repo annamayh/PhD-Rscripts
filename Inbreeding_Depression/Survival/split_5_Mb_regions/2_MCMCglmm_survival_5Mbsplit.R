@@ -6,9 +6,29 @@ setwd("H:/")
 
 juvenile_surv_df_5mb=read.table("PhD_4th_yr/Inbreeding_depression_models/survival/split_regions/5split_juvenile_survival_df.txt", sep=",", header=T)
 
+juvenile_surv_df_5mb$MotherStatus[juvenile_surv_df_5mb$MotherStatus == 'Na\xefve'] = "Naive"
+
+table(juvenile_surv_df_5mb$MotherStatus)
+
+db<-"C:\\Users\\s1881212\\Documents\\Deer_database_2022/RedDeer2.05.1.accdb" #open connection
+con<-odbcConnectAccess2007(db)
+
+life<-sqlFetch(con, "tbllife") %>% 
+  dplyr::select(Code, BirthDay,BirthMonth, BirthYear,DeathDay,DeathMonth,DeathYear, Sex, MumCode, DeathType)
+odbcClose(con)
+
+day_seq=read.csv("PhD_4th_yr/Inbreeding_depression_models/date_seq.csv", header = TRUE)
+head(day_seq)
+DOBs=life%>%select(Code, BirthDay, BirthMonth)%>%
+  left_join(day_seq)%>% ## sequences of day starting at 30th April 
+  select(Code, Day_seq)
+
+
+
 #head(juvenile_surv_df)
 juvenile_surv_df_na_rm=juvenile_surv_df_5mb%>%
   select(-BirthWt)%>% #removing birthwt from df cos not going to fit it this time and dont need mum birth yr
+  left_join(DOBs)%>%
   #filter(!Sex=="3")%>%
   na.omit() #remove all NAs
 ## change some variables to factors 
@@ -18,6 +38,20 @@ juvenile_surv_df_na_rm$MumCode=as.factor(juvenile_surv_df_na_rm$MumCode)
 juvenile_surv_df_na_rm$MotherStatus=as.factor(juvenile_surv_df_na_rm$MotherStatus)
 juvenile_surv_df_na_rm$Sex=as.factor(juvenile_surv_df_na_rm$Sex)
 
+
+
+FROH_mat=as.matrix(juvenile_surv_df_na_rm[9:506])
+
+juvenile_surv_df_na_rm=juvenile_surv_df_na_rm[,c(1:8,507:508)]
+
+juvenile_surv_df_na_rm$FROH_mat=FROH_mat
+
+
+save(juvenile_surv_df_na_rm, file="PhD_4th_yr/Inbreeding_depression_models/survival/INPUT_5Mb_juve_surv_df.RData")
+
+load("PhD_4th_yr/Inbreeding_depression_models/survival/INPUT_5Mb_juve_surv_df.RData")
+
+
 k<-100
 prior<-list(R=list(V=1,fix=1),
             G=list(G1=list(V=1,nu=1,alpha.mu=0,alpha.V=k), ## multimemberhsip part
@@ -25,17 +59,14 @@ prior<-list(R=list(V=1,fix=1),
                    G1=list(V=1,nu=1,alpha.mu=0,alpha.V=k)))
 
 
-FROH_mat=as.matrix(juvenile_surv_df_na_rm[9:506])
 
-juvenile_surv_df_na_rm$FROH_mat=FROH_mat
-
-juvenile_surv_model<-MCMCglmm(juvenile_survival~1 + Sex + MotherStatus + FROH_split_sum + mum_age+mum_age_sq, #need to fit sum chrFROH  as continuous covariate,
+juvenile_surv_model<-MCMCglmm(juvenile_survival~1 + Sex + MotherStatus + FROH_split_sum + mum_age+mum_age_sq+Day_seq, #need to fit sum chrFROH  as continuous covariate,
                               random= ~ idv(FROH_mat)+BirthYear +MumCode,
                               family="threshold",
                               data=juvenile_surv_df_na_rm,
                               prior = prior,
                               pr=TRUE,#saves posterior dist for random effects i.e. what we want
-                              nitt=200000,burnin=50000
+                              #nitt=1000000,burnin=250000
 )##
 
 

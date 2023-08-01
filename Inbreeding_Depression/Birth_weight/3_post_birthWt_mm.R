@@ -2,13 +2,16 @@
 library(tidyverse)
 library(data.table)
 setwd("H:/")
-load(file="PhD_4th_yr/Inbreeding_depression_models/birth_weight/birth_wt_model_output_incmumage_50kit_50bin.RData")
+load(file="PhD_4th_yr/Inbreeding_depression_models/birth_weight/birth_wt_model_output24072023.RData")
 
+birth_wt_df=read.table("PhD_4th_yr/Inbreeding_depression_models/birth_weight/birth_wt_df.txt", sep=",", header=T)
+birth_wt_df_na_rm=birth_wt_df%>%
+  na.omit()
 
 summary_table=summary(birth_wt_model)$solutions
 summary_table
 
-FROH_sum_sol=summary(birth_wt_model)$solutions[10,1]
+FROH_sum_sol=summary(birth_wt_model)$solutions[11,1]
 FROHsumest=as.data.frame(birth_wt_model$Sol)%>%dplyr::select(matches("FROHs"))
 FROH_sum_hu_upr=quantile(FROHsumest$FROHsum, prob=c(0.975)) 
 FROH_sum_hu_lwr=quantile(FROHsumest$FROHsum, prob=c(0.025)) 
@@ -17,7 +20,7 @@ FROH_sum_hu_lwr=quantile(FROHsumest$FROHsum, prob=c(0.025))
 rands=as.data.frame(birth_wt_model$VCV)
 
 sols_full<-as.data.frame(birth_wt_model$Sol)%>%dplyr::select(matches("FROH"))%>% ## taking out sols with FROH included
-  dplyr::mutate(across(2:34, ~.x + FROHsum)) ## adding FROHsum to chrFROH values
+  dplyr::mutate(across(2:34, ~.x + FROH_sum_sol)) ## adding FROHsum to chrFROH values
 
 names <- sols_full %>% names ## gets names of all random variables, 2 = all down row
 sols<-apply(sols_full,2,mean)#gets mean of all solutions i.e. the effect size of random effects 
@@ -48,8 +51,10 @@ forest=ggplot(data=FROH_sols, aes(x=CHR, y=solution, ymin=CI_lower, ymax=CI_uppe
   annotate("pointrange", x = 34, y = FROH_sum_sol, ymin = FROH_sum_hu_upr, ymax = FROH_sum_hu_lwr,
            colour = "red", linewidth = 1, alpha=0.5, size=0.2)+
   ##significance of FROHsum
-  geom_text(aes(x=34.5, y=-0.115, label="***"), colour="red", alpha=0.5)+
-  expand_limits(x = 35)
+  geom_text(aes(x=34.5, y=FROH_sum_sol, label="***"), colour="red", alpha=0.5)+
+  expand_limits(x = 35)+
+  theme(text = element_text(size = 18), plot.title = element_text(size=13), axis.text.y = element_text(size=10))
+
 
 
 forest
@@ -62,9 +67,9 @@ forest
 # model Sex + AgeHrs + MotherStatus + mum_age+mum_age_sq+FROHsum+(mm chr FROH)+mumcode(random)+birthyr(random)
 
 #read in table to see what averages are
-birth_wt_df=read.table("PhD_4th_yr/Inbreeding_depression_models/birth_weight/birth_wt_df2023.txt", sep=",", header=T)
-birth_wt_df_na_rm=birth_wt_df%>%
-  dplyr::select(-mum_birthyear)%>%na.omit()
+# birth_wt_df=read.table("PhD_4th_yr/Inbreeding_depression_models/birth_weight/birth_wt_df2023.txt", sep=",", header=T)
+# birth_wt_df_na_rm=birth_wt_df%>%
+#   dplyr::select(-mum_birthyear)%>%na.omit()
 
 ##check mean birth weight
 mean(birth_wt_df_na_rm$CaptureWt) ##this is what we are predicting 
@@ -74,10 +79,11 @@ mean(birth_wt_df_na_rm$CaptureWt) ##this is what we are predicting
 
 
 ## finding means coefficients from df used 
-Sex=1.5#1=female 2=male intercept is females 
+Sex=0.5#1=female 2=male intercept is females 
 AgeHrs=median(birth_wt_df_na_rm$AgeHrs)#median is 24 hrs 
 mum_age=mean(birth_wt_df_na_rm$mum_age) #mean mum age in dataset
 mum_age_sq=mum_age^2
+day_seq=33
 
 
 ##also choose quantiles 
@@ -97,9 +103,10 @@ for(v in 1:length(ibc_qua)){
     for (i in 1:33){
       bw_pred=summary_table[1,1]+#intercept
         (Sex *(summary_table[2,1]))+ 
-        (AgeHrs*(summary_table[3,1])) + #median age in hrs * coefficient predicted from model
+        (AgeHrs*(summary_table[3,1])) + #Assuming calf is 0 hours old 
         (mum_age*(summary_table[8,1]))+
         (mum_age_sq*(summary_table[9,1]))+
+        (day_seq*summary_table[10,1])+
         (ibc*(as.numeric(FROH_sols[i,1])))
       bw_pred_list[i]=bw_pred
     }
@@ -126,7 +133,12 @@ chrind=pred_ibcs_all%>%arrange(CHR)%>%
   ggplot(aes(x=as.numeric(ibc),y=bw_prediction, group=as.factor(CHR), colour=as.factor(CHR)))+
   geom_line(linewidth=1)+
   theme_bw()+
-  labs(x=" Inbreeding coefficient", y="Predicted capture weight (kg)", title="Predicted capture weight assuming \nchromosme independence",colour="Chromosome" )
+  labs(x=" Inbreeding coefficient", y="Predicted birth weight (kg)", title="Predicted birth weight assuming \nchromosme independence",colour="Chromosome" )+
+    theme(text = element_text(size = 18), 
+          plot.title = element_text(size=13), 
+          legend.title = element_text(size=10),
+          legend.text = element_text(size=9))
+
 
 chrind
 
@@ -137,7 +149,11 @@ chrind
 ### now assumung indiv is inbred by same amount on all chromosomes
 # plus CIs
 
-Sex=1.5
+Sex=0.5#1=female 2=male intercept is females 
+AgeHrs=median(birth_wt_df_na_rm$AgeHrs)#median is 24 hrs 
+mum_age=mean(birth_wt_df_na_rm$mum_age) #mean mum age in dataset
+mum_age_sq=mum_age^2
+day_seq=33
 
 
 inter=as.data.frame(birth_wt_model$Sol)%>%dplyr::select(matches("Interc"))
@@ -156,44 +172,42 @@ mumage_ests=mumage_ests*mum_age
 mumagesq_ests=as.data.frame(birth_wt_model$Sol)%>%dplyr::select(("mum_age_sq"))
 mumagesq_ests=mumagesq_ests*(mum_age^2)
 
+day_seq_ests=as.data.frame(birth_wt_model$Sol)%>%dplyr::select(("Day_seq"))
+day_seq_ests=day_seq_ests*day_seq
 
-all_effects=as.matrix(rowSums(inter%>%cbind(sex_ests)%>%cbind(age_ests)%>%cbind(mumage_ests)%>%cbind(mumagesq_ests)))
+
+all_effects=as.matrix(rowSums(inter%>%cbind(sex_ests)%>%cbind(age_ests)%>%cbind(mumage_ests)%>%cbind(mumagesq_ests)%>%cbind(day_seq_ests)))
 
 
 ibc_qua=c(0,0.05,0.1,0.15,0.2,0.25,0.3)
 
 
-chr_sols=as.data.frame(birth_wt_model$Sol)%>%dplyr::select(matches("FROH_"))
-chr_sols=as.matrix(chr_sols)
-
-head(chr_sols)
-
 pred_nonind=list()
 for(v in 1:length(ibc_qua)){
   
-
     ibc=ibc_qua[v]
-    
-    if (ibc==0){
-    all_its=all_effects # when ibc = inbreeding has no effect 
+    pred_per_it=list()
       
-    }else{
-    FROHsum_sol=FROHsumest*ibc*33
-    all_its=FROHsum_sol+all_effects
+    
+    for (row in 1:nrow(sols_full)){
+    iter_chr=sum(sols_full[row,]*ibc)#sum of all chromosomal effects x inbreeding coefficient 
+    iter_fixed=all_effects[row,]
+    pred_per_it[[row]]=iter_chr+iter_fixed
+    
+      
     }
     
+    bw_pred_unlist=do.call(rbind.data.frame,pred_per_it)
     
-    mean=apply(all_its, 2, mean)
-    quantU=apply(all_its, 2, quantile,0.975)
-    quantL=apply(all_its, 2, quantile,0.025) 
+    mean<-apply(bw_pred_unlist,2,mean)#gets mean of all solutions i.e. the effect size of random effects 
+    CI_upper<-apply(bw_pred_unlist,2,quantile,probs = c(0.975)) #gets upper confidence interval for all solutions 
+    CI_lower<-apply(bw_pred_unlist,2,quantile,probs = c(0.025)) #gets lower CI for all solutions
     
+    bw_mat=matrix(c(mean,CI_upper,CI_lower, paste0(ibc)),nrow = 1, ncol = 4)
+    pred_nonind[[v]]=bw_mat
     
-    pred_mat=matrix(c(mean,quantU,quantL,(paste0(round(ibc, digits = 4)))), nrow=1, ncol=4)
 
-    
-    pred_nonind[[v]]=pred_mat  
     }
-
 
 
 pred_ibcs_mean=do.call(rbind.data.frame,pred_nonind) 
@@ -201,22 +215,29 @@ pred_ibcs_mean=do.call(rbind.data.frame,pred_nonind)
 names(pred_ibcs_mean)<-c("Mean","upperCI","lowerCI","ibc")
 pred_ibcs_mean <- sapply(pred_ibcs_mean, as.numeric)%>%as.data.frame()
 
+
+birth_wt_df_na_rm_plot=birth_wt_df_na_rm%>%filter(AgeHrs<48)
+
 chrnonind=ggplot(data=pred_ibcs_mean,aes(x=ibc,y=Mean))+
   geom_line(linewidth=1)+
   theme_bw()+
-  labs(x="Inbreeding coefficient", y="Predicted Capture weight (kg)", title="Predicted capture weight assuming \nequal inbreeding on all chromosomes")+
-  geom_ribbon(aes(ymin = lowerCI, ymax = upperCI), alpha = 0.1)
+  labs(x="Inbreeding coefficient", y="Predicted birth weight (kg)", title="Predicted birth weight assuming \nequal inbreeding on all chromosomes")+
+  geom_ribbon(aes(ymin = lowerCI, ymax = upperCI), alpha = 0.1)+
+  theme(text = element_text(size = 18), 
+        plot.title = element_text(size=13))+
+  geom_point(data = birth_wt_df_na_rm_plot, (aes(x=FROH_sum_div, y=BirthWt)), inherit.aes = F, alpha=0.15)+
+  xlim(0,0.3)
 
 chrnonind
 
-#library(patchwork)
+library(patchwork)
 
 Bw_3in1=chrnonind+forest+chrind+plot_annotation(tag_levels = 'A')
 
 Bw_3in1
 
 ggsave(Bw_3in1,
-       file = "PhD_4th_yr/Inbreeding_depression_models/birth_weight/all3_birthweight.png",
+       file = "PhD_4th_yr/Inbreeding_depression_models/birth_weight/all3_birthweight_points.png",
        width = 17,
        height = 6)
 

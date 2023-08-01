@@ -4,23 +4,21 @@ library(data.table)
 
 setwd("H:/")
 
-load(file="PhD_4th_yr/Inbreeding_depression_models/survival/A_juvenile_survival_model_output.RData")
+load(file="PhD_4th_yr/Inbreeding_depression_models/survival/split_regions/juvenile_surv_5Mb_output.RData")
 
-summary(juvenile_surv_model)
 
-summary_table=summary(juvenile_surv_model)$solutions
 summary_table
 
-FROH_sum_sol=summary(juvenile_surv_model)$solutions[7,1]
-FROH_sum_upr=summary(juvenile_surv_model)$solutions[7,2]
-FROH_sum_lwr=summary(juvenile_surv_model)$solutions[7,3]
+FROH_sum_sol=summary_table[7,1]
+FROH_sum_upr=summary_table[7,2]
+FROH_sum_lwr=summary_table[7,3]
 
 
-mean(rowSums(juvenile_surv_model$VCV))
 
 
-sols_full<-as.data.frame(juvenile_surv_model$Sol)%>%dplyr::select(matches("FROH_"))%>% ## taking out sols with FROH included
- dplyr::mutate(across(1:33, ~.x + FROH_sum_sol)) ## adding FROHsum to chrFROH values
+
+sols_full<-as.data.frame(sols)%>%dplyr::select(matches("FROH_mat"))%>% ## taking out sols with FROH included
+ dplyr::mutate(across(1:487, ~.x + FROH_sum_sol)) ## adding FROHsum to chrFROH values
 
 names <- sols_full %>% names ## gets names of all random variables, 2 = all down row
 sols<-apply(sols_full,2,mean)#gets mean of all solutions i.e. the effect size of random effects 
@@ -32,32 +30,23 @@ Random_table<-tibble(sols,row.names=names)%>%add_column(CI_upper)%>%add_column(C
 names(Random_table)[1]<-"solution"
 names(Random_table)[2]<-"model_variable"
 
-FROH_sols<-Random_table%>%filter(model_variable %like% "FROH_c")%>% add_column(CHR = 1:33) ##filtering all random variables for those including FROH
+FROH_sols<-Random_table%>%add_column(window = 1:487) ##filtering all random variables for those including FROH
 
-FROH_sols$CHR<-as.factor(FROH_sols$CHR)
-
-
-FROH_sols$overlap_zero<-ifelse(FROH_sols$CHR %in% c("12"),"Yes","No")
+FROH_sols$window<-as.factor(FROH_sols$window)
 
 
-surv_forest=ggplot(data=FROH_sols, aes(x=CHR, y=solution, ymin=CI_lower, ymax=CI_upper, color = overlap_zero)) +
+#FROH_sols$overlap_zero<-ifelse(FROH_sols$CHR %in% c("12"),"Yes","No")
+
+
+surv_forest=ggplot(data=FROH_sols, aes(x=window, y=solution, ymin=CI_lower, ymax=CI_upper)) +
   geom_pointrange() + #plots lines based on Y and lower and upper CI
   geom_hline(yintercept=0, lty=2) +  # black line is 0
-  coord_flip() +  # flip coordinates (puts labels on y axis)
+  geom_hline(yintercept=FROH_sum_sol, lty=1, colour="red") +  # black line is 0
+  #coord_flip() +  # flip coordinates (puts labels on y axis)
   labs(x="Chromosome", y="Posterior estimate + CI", 
        title="Deviation of chromosomal inbreeding effects \nfrom combined effect of all chromosomes", tag = "B") +
   theme_classic()+  # use a white background                 
-  theme(legend.position = "none")+
-  scale_color_manual(values=c("grey50","red"),guide=FALSE)+
-  annotate("segment", x = 0, xend = 34, y = FROH_sum_sol, yend = FROH_sum_sol, colour = "red", alpha=0.6)+
-  ##add in estimate of FROHsum
-  annotate("pointrange", x = 34, y = FROH_sum_sol, ymin = FROH_sum_upr, ymax = FROH_sum_lwr,
-           colour = "red", linewidth = 1, alpha=0.5, size=0.2)+
-  ##significance of FROHsum
-  geom_text(aes(x=34.5, y=FROH_sum_sol, label="***"), colour="red", alpha=0.5)+
-  expand_limits(x = 35)+
-  theme(text = element_text(size = 18), plot.title = element_text(size=13), axis.text.y = element_text(size=10))
-
+  theme(legend.position = "none")
 
 surv_forest
 

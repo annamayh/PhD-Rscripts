@@ -25,7 +25,7 @@ surv_loc_df$Reg=as.factor(surv_loc_df$Reg)
 
 
 #fitting simple model of juvenile survival 
-suv_model_simple=glmmTMB(juvenile_survival~ Sex + MotherStatus + mum_age+mum_age_sq+Day_seq+BirthWt+
+suv_model_simple=glmmTMB(juvenile_survival~ Sex + MotherStatus + mum_age+mum_age_sq+Day_seq+
                            (1|BirthYear)+(1|MumCode), 
                          family=binomial, 
                          data=surv_loc_df, 
@@ -48,14 +48,13 @@ summary(surv_froh)
 ## now fitting an interaction between region and FROH
 surv_froh_inter=update(suv_model_simple, ~ . + (Reg*FROH)) #interaction between region and froh
 summary(surv_froh_inter)
-ggpredict(surv_froh_inter, terms = c("FROH[all]","Reg"))
 #plot predictions
 inter=plot(ggpredict(surv_froh_inter, terms = c("FROH[all]","Reg")),show.title=FALSE, colors="metro", line.size=1)+
   labs(x = expression(F["ROH"]), y = "Juvenile survival probability", colour = "Spatial region")+
   theme(text = element_text(size = 15)) 
 inter
 
-
+ggpredict(surv_froh_inter, terms = c("FROH[all]","Reg"))
 
 ### same process to look at winter survival 
 
@@ -79,7 +78,7 @@ winter_surv_loc_df$Reg=as.factor(winter_surv_loc_df$Reg)
 
 
 #fitting simple model of juvenile survival 
-wint_suv_model_simple=glmmTMB(first_year_survival~ Sex + MotherStatus + mum_age+mum_age_sq+Day_seq+BirthWt+ ##fit birth weight as cov as 
+wint_suv_model_simple=glmmTMB(first_year_survival~ Sex + MotherStatus + mum_age+mum_age_sq+Day_seq+ ##fit birth weight as cov as 
                                 (1|BirthYear)+(1|MumCode), 
                               family=binomial, 
                               data=winter_surv_loc_df, 
@@ -112,7 +111,7 @@ summary(wint_surv_froh)
 ## now fitting an interaction between region and FROH
 wint_surv_froh_inter=update(wint_suv_model_simple, ~ . + (Reg*FROH)) #interaction between region and froh
 summary(wint_surv_froh_inter)
-ggpredict(wint_surv_froh_inter, terms = c("FROH[all]","Reg"))
+plot(ggpredict(wint_surv_froh_inter, terms = c("FROH[all]","Reg","Sex")))
 ##plot predictions
 wint_inter=plot(ggpredict(wint_surv_froh_inter, terms = c("FROH[all]","Reg")),show.title=FALSE, colors="metro", line.size=1)+
   labs(x = expression(F["ROH"]), y = "First year survival probability", colour = "Spatial region")+

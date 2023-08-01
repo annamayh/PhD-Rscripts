@@ -23,6 +23,13 @@ setwd("H:/")
 mum_stat=read.csv("PhD_4th_yr/Inbreeding_depression_models/hind_status_at_conception_download072022.csv", header = T, stringsAsFactors = F)%>%
  select(-CalfBirthYear)%>%rename(MumCode=Mum, Code=Calf)
 
+day_seq=read.csv("PhD_4th_yr/Inbreeding_depression_models/date_seq.csv", header = TRUE)
+head(day_seq)
+DOBs=life%>%select(Code, BirthDay, BirthMonth)%>%
+  left_join(day_seq)%>% ## sequences of day starting at 30th April 
+  select(Code, Day_seq)
+
+
 ##################################
 #### calculating juvenile survival###
 ######################################
@@ -134,7 +141,9 @@ juvenile_surv_df=juvenile_surv%>%
   inner_join(froh_per_chr)%>%## only joining when ids have FROH values and juvenile surv values
   mutate(mum_age_sq=mum_age^2)%>%
   select(-mum_birthyear)%>%#dont need mum birth yr in df anymore
-  filter(!Sex=="3")
+  filter(!Sex=="3")%>%
+  left_join(DOBs)
+  
 ##some NAs in mum stat and birth weight
 
 

@@ -49,23 +49,23 @@ reg=FROH_reg_pred%>%
   geom_pointrange(linewidth=1)+
   theme_bw()+
   scale_color_manual(values = c("#f0a30a" ,"#a20025","#00aba9","chocolate1","#60a917", "#647687"))+
-  labs(x="Spatial region", y=expression(paste("F"[ROH])), tag="A")+
+  labs(x="Spatial region", y=expression(paste("F"[ROH])))+
   theme(text = element_text(size = 18),legend.position = "none")
 reg
 
 
 ##inla_froh_gg loaded from INLA_FROH.R 
 library(patchwork)
-inla_and_glmm=reg|inla_froh_gg
+inla_and_glmm=(reg|inla_froh_gg)+plot_annotation(tag_levels = "A")
 inla_and_glmm
 
-# 
-# ggsave(inla_and_glmm,
-#        file = "PhD_4th_yr/Spatial_var_inbreeding/Chapter_wrting/plots/FROH_both.jpeg",
-#        width = 11,
-#        height = 7, 
-#        dpi=1000)
-# 
+
+ggsave(inla_and_glmm,
+       file = "PhD_4th_yr/Spatial_var_inbreeding/Chapter_wrting/plots/FROH.jpeg",
+       width = 11,
+       height = 7,
+       dpi=1000)
+
 
 
 

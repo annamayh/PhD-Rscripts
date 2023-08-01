@@ -4,7 +4,7 @@ library(tidyverse)
 db<-"C:\\Users\\s1881212\\Documents\\Deer_database_2022/RedDeer2.05.1.accdb" #open connection
 con<-odbcConnectAccess2007(db)
 
-mum_stat<-sqlFetch(con, "sys_HindStatusAtConception") %>%dplyr::select(-CalfBirthYear)%>%dplyr::rename(MumCode=Mum, Code=Calf)
+#mum_stat<-sqlFetch(con, "sys_HindStatusAtConception") %>%dplyr::select(-CalfBirthYear)%>%dplyr::rename(MumCode=Mum, Code=Calf)
 census<-sqlFetch(con, "tblCensus")%>%dplyr::select(Date,Code,Northing,Easting)
 
 mum_birthyr<-sqlFetch(con, "tbllife")%>%dplyr::select(Code,BirthYear)%>%dplyr::rename(mum_birthyear=BirthYear,MumCode=Code)
@@ -17,7 +17,11 @@ last_cen=sqlFetch(con, "sys_LastCensusSighting")
 
 odbcClose(con)
 
-head(census)
+
+setwd("H:/")
+mum_stat=read.csv("PhD_4th_yr/Inbreeding_depression_models/hind_status_at_conception_download072022.csv", header = T, stringsAsFactors = F)%>%
+  select(-CalfBirthYear)%>%rename(MumCode=Mum, Code=Calf)
+
 ############
 
 
@@ -94,7 +98,7 @@ year_plus_est_death$YearLast=as.numeric(year_plus_est_death$YearLast)
 year_winter=year_plus_est_death%>%
   mutate(first_year_survival = case_when(
     ((is.na(DeathYear)) & (BirthYear==YearLast))~"0",
-    #if died in same year born then juvenile surv=0
+    #if died in same year born 
     (DeathYear==BirthYear) ~ "0", 
     #if died before May in 1st year of life 
     (DeathYear==(BirthYear+1))&(DeathMonth<5) ~ "0", 
@@ -152,10 +156,10 @@ FROH_full<-read.table("PhD_4th_yr/2023_ROH_search/2021_sleuthed_052023.hom.indiv
   filter(nchar(Code)==5)%>% #removing IDs with non-sensical ID codes
   select(-KB)
 
-FROH_mum<-read.table("PhD_4th_yr/2023_ROH_search/2021_sleuthed_052023.hom.indiv", header=T, stringsAsFactors = F)%>%
-  dplyr::select(IID,KB) %>% dplyr::rename(MumCode=IID)%>%mutate(MumFROH=KB/2591865)%>%
-  filter(nchar(MumCode)==5)%>% #removing IDs with non-sensical ID codes
-  select(-KB)
+# FROH_mum<-read.table("PhD_4th_yr/2023_ROH_search/2021_sleuthed_052023.hom.indiv", header=T, stringsAsFactors = F)%>%
+#   dplyr::select(IID,KB) %>% dplyr::rename(MumCode=IID)%>%mutate(MumFROH=KB/2591865)%>%
+#   filter(nchar(MumCode)==5)%>% #removing IDs with non-sensical ID codes
+#   select(-KB)
 
 # FROH_loc_df=mum_loc_calf_yr%>%right_join(FROH_full)%>%
 #   right_join(juvenile_surv)%>%
@@ -165,14 +169,14 @@ FROH_mum<-read.table("PhD_4th_yr/2023_ROH_search/2021_sleuthed_052023.hom.indiv"
 
 mum_loc_calf_yr$BirthYear=as.numeric(as.character(mum_loc_calf_yr$BirthYear))
 
-winter_surv_reg_df=winter_survival%>%
+firstYt_surv_reg_df=winter_survival%>%
   left_join(mum_stat)%>%left_join(birth_wt)%>%
   left_join(mum_birthyr)%>%
   mutate(mum_age=BirthYear-mum_birthyear)%>%
   mutate(mum_age_sq=mum_age^2)%>%
   left_join(mum_loc_calf_yr)%>%
   right_join(FROH_full)%>%
-  right_join(FROH_mum)%>%
+  #right_join(FROH_mum)%>%
   rename(N=N_calf_yr, E=E_calf_yr)%>%
   left_join(DOBs)%>%
   select(-mum_birthyear)#dont need mum birth yr in df anymore
@@ -188,10 +192,10 @@ LocToReg6 <- function(E, N) {
                        ifelse(E < 1373 , "IM", "SI")))) }
 
 
-winter_surv_reg_df$Reg <- with(winter_surv_reg_df, LocToReg6(E, N))
+firstYt_surv_reg_df$Reg <- with(firstYt_surv_reg_df, LocToReg6(E, N))
 ##note this code was written thinking winter = first year survival hence the weird df names 
 ## rest assured it is juvenile survival 
-write.table(winter_surv_reg_df,
+write.table(firstYt_surv_reg_df,
             file = "PhD_4th_yr/Spatial_var_inbreeding/first_year_survival_loc.txt",
             row.names = F, quote = F, sep = ",",na = "NA") #saving tables as txt file 
 

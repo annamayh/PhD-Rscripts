@@ -15,41 +15,6 @@ male_LBS_df$MumCode=as.factor(male_LBS_df$MumCode)
 
 # 
 # 
-# k<-1000
-# prior.2 = list(R = list(V = diag(2), nu = 0.002,fix = 2),
-#                G = list(G1 = list(V = diag(2), nu = 0.02),
-#                         G2 = list(V = diag(2), nu = 0.02),
-#                         G3 = list(V=1,nu=1,alpha.mu=0,alpha.V=k),
-#                         G4 = list(V=1,nu=1,alpha.mu=0,alpha.V=k)))#G3 referring to chrFROH
-# 
-# 
-# 
-# k<-1000
-# prior.3 = list(R = list(V = diag(2), nu = 0.002,fix = 2),
-#                G = list(G1 = list(V = diag(2), nu = 1,alpha.mu=c(0,0),alpha.V=diag(k,2)),
-#                         G2 = list(V = diag(2), nu = 1,alpha.mu=c(0,0),alpha.V=diag(k,2)),
-#                         G3 = list(V=1,nu=1,alpha.mu=0,alpha.V=k),
-#                         G4 = list(V=1,nu=1,alpha.mu=0,alpha.V=k)))#G3 referring to chrFROH
-# 
-# 
-# k<-1000
-# prior.4 = list(R = list(V = diag(2), nu = 0.002,fix = 2),
-#                G = list(G1 = list(V=diag(2), nu=2, alpha.mu=c(0,0), alpha.V=diag(2)*k),
-#                         G2 = list(V=diag(2), nu=2, alpha.mu=c(0,0), alpha.V=diag(2)*k),
-#                         G3 = list(V=1,nu=1,alpha.mu=0,alpha.V=k),
-#                         G4 = list(V=1,nu=1,alpha.mu=0,alpha.V=k)))#G3 referring to chrFROH
-# 
-# 
-# 
-# k<-1000
-# prior.5 = list(R = list(V = diag(2), fix = 1),
-#                G = list(G1 = list(V=diag(2), nu=2, alpha.mu=c(0,0), alpha.V=diag(2)*k),
-#                         G2 = list(V=diag(2), nu=2, alpha.mu=c(0,0), alpha.V=diag(2)*k),
-#                         G3 = list(V=1,nu=1,alpha.mu=0,alpha.V=k),
-#                         G4 = list(V=1,nu=1,alpha.mu=0,alpha.V=k)))#G3 referring to chrFROH
-# 
-# 
-# 
 
 
 k<-1000
@@ -61,16 +26,6 @@ prior.6 = list(R = list(V = diag(2), nu=2, fix = 2),
 
 
 
-
-# prior.3$R
-# prior.3$G
-# 
-# prior<-list(R=list(V = diag(2), nu = 0.002,fix = 2),
-#             G=list(G1=list(V=1,nu=1,alpha.mu=0,alpha.V=k), ## multimemberhsip part
-#                    G2=list(V=1,nu=1,alpha.mu=0,alpha.V=k),
-#                    G3=list(V=1,nu=1,alpha.mu=0,alpha.V=k),
-#                    G3=list(V=1,nu=1,alpha.mu=0,alpha.V=k)))
-# 
 
 
 #################################################################################
@@ -96,10 +51,11 @@ male_LBS_model=MCMCglmm(LBS~ trait+trait:FROHsum-1,
                         #verbose = FALSE, 
                         pr = TRUE, 
                         pl = TRUE,
-                        nitt=550000, burnin=150000, thin = 500
+                        nitt=1000000, burnin=250000, thin = 500
 )
 
 
+beep(sound = 4)
 
 #first fixed term = intercept of the Poisson process 
 #second fixed term = intercept of the zero-inflation  
@@ -118,4 +74,4 @@ summary(male_LBS_model)
 
 
 
-save(male_LBS_model,male_LBS_df, file="PhD_4th_yr/Inbreeding_depression_models/LBS/male_LBS_model_output_prior.6.RData")
+save(male_LBS_model,male_LBS_df, file="PhD_4th_yr/Inbreeding_depression_models/LBS/male_LBS_model_output_final.RData")

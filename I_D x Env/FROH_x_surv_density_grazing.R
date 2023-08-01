@@ -42,7 +42,7 @@ suv_model_simple=glmmTMB(juvenile_survival~ Sex + MotherStatus + mum_age+mum_age
 summary(suv_model_simple)
 
 
-surv_graze_den=update(suv_model_simple, ~ . + GrazeType*AnnualDensity) ##just region as fixed effect
+surv_graze_den=update(suv_model_simple, ~ . + GrazeType*AnnualDensity) #
 summary(surv_graze_den)
 graze_pred=ggpredict(surv_graze_den, terms = c("GrazeType[all]"))
 graze_pred
@@ -53,7 +53,7 @@ plot(den_pred)
 
 
 
-surv_den_inter=update(suv_model_simple, ~ . -FROH+ (FROH*AnnualDensity*GrazeType)) ##just region as fixed effect
+surv_den_inter=update(suv_model_simple, ~ . -FROH+ (FROH*AnnualDensity*GrazeType)) ##
 summary(surv_den_inter)
 den_pred_inter=ggpredict(surv_den_inter, 
                          terms = c("FROH[all]","AnnualDensity[0, 0.00025,0.0005, 0.00075, 0.001, 0.00125,0.0015, 0.00175, 0.002, 0.00225, 0.0025,0.00275, 0.003]"))

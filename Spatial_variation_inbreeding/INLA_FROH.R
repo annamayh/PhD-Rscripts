@@ -124,7 +124,7 @@ coul <- viridis(100)
 
 
 inla_froh_gg=ggField(IM_sp2, Mesh, Fill="Continuous")+
-  labs(tag="B", fill = "FROH\n(as deviation \nfrom mean)")+
+  labs(fill = "FROH\n(as deviation \nfrom mean)")+
   theme_bw()+
   scale_fill_continuous_sequential(palette = "BluYl")+
   theme(text = element_text(size = 18),

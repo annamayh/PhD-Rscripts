@@ -4,20 +4,11 @@ library(data.table)
 
 setwd("H:/")
 
-female_LBS_df=read.table("PhD_4th_yr/Inbreeding_depression_models/LBS/female_LBS_df.txt", sep=",", header=T)
-#692 ids
+female_LBS_df=read.table("PhD_4th_yr/Inbreeding_depression_models/LBS/female_LBS_df.txt", sep=",", header=T)#692 ids
 female_LBS_df$Code=as.factor(female_LBS_df$Code)
 female_LBS_df$BirthYear=as.factor(female_LBS_df$BirthYear)
 female_LBS_df$MumCode=as.factor(female_LBS_df$MumCode)
 
-
-# k<-10000
-# prior.2 = list(R = list(V = diag(2), nu = 2,fix = 2),
-#                G = list(G1 = list(V = diag(2), nu = 0.002),
-#                         G2 = list(V = diag(2), nu = 0.002),
-#                         G3 = list(V=1,nu=1,alpha.mu=0,alpha.V=k),
-#                         G3 = list(V=1,nu=1,alpha.mu=0,alpha.V=k)))#G3 referring to chrFROH
-# #nu=0
 
 k<-1000
 prior.6 = list(R = list(V = diag(2), nu=2, fix = 2),
@@ -47,13 +38,13 @@ female_LBS_model=MCMCglmm(LBS~ trait+trait:FROHsum-1,
                           data = female_LBS_df, 
                           family = "hupoisson", 
                           prior = prior.6,
-                          #verbose = FALSE, 
                           pr = TRUE, 
                           pl = TRUE,
                           nitt=650000, burnin=150000, thin = 200
 )
 
 
+beep(sound=8)
 
 
 plot(female_LBS_model)
@@ -65,4 +56,4 @@ diag(autocorr(female_LBS_model$VCV)[2,,])
 ##still a bit of suto in mmcode when thin=200
 
 
-save(female_LBS_df,female_LBS_model, file="PhD_4th_yr/Inbreeding_depression_models/LBS/Female_LBS_model_output_prior6_final.RData")
+save(female_LBS_df,female_LBS_model, file="PhD_4th_yr/Inbreeding_depression_models/LBS/Female_LBS_model_output_final.RData")
