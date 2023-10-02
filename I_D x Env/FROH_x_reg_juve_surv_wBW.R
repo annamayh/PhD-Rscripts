@@ -11,7 +11,7 @@ setwd("H:/")
 surv_loc_df=read.table("PhD_4th_yr/Spatial_var_inbreeding/survival_loc.txt", sep = ",", header = TRUE)
 
 surv_loc_df=surv_loc_df%>%
-  select(-MumFROH, -BirthWt)%>%
+  select(-MumFROH)%>%
   na.omit()
 
 head(surv_loc_df)
@@ -26,7 +26,7 @@ surv_loc_df$Reg=as.factor(surv_loc_df$Reg)
 
 
 #fitting simple model of juvenile survival 
-suv_model_simple=glmmTMB(juvenile_survival~ Sex + MotherStatus + mum_age+mum_age_sq+Day_seq+FROH+
+suv_model_simple=glmmTMB(juvenile_survival~ Sex + MotherStatus + mum_age+mum_age_sq+Day_seq+FROH+BirthWt+
                            (1|BirthYear)+(1|MumCode), 
                          family=binomial, 
                          data=surv_loc_df, 
@@ -68,18 +68,18 @@ surv_reg
 
 
 # INLA plot taken from INLA_juvenile_surv.R code
-# inla_and_reg=surv_reg+inla_surv_plot
-# inla_and_reg
-# 
-# ggsave(inla_and_reg,
-#        file = "PhD_4th_yr/Spatial_var_inbreeding/Chapter_wrting/plots/juve_surv_both.jpeg",
-#        width = 11,
-#        height = 7, 
-#        dpi=300)
-# 
-# 
+inla_and_reg=surv_reg+inla_surv_plot
+inla_and_reg
 
-save(surv_reg, file="PhD_4th_yr/Spatial_var_inbreeding/Chapter_wrting/plots/juve_surv_plot_reg.RData")
+ggsave(inla_and_reg,
+       file = "PhD_4th_yr/Spatial_var_inbreeding/Chapter_wrting/plots/juve_surv_both_wBW.jpeg",
+       width = 11,
+       height = 7,
+       dpi=1000)
+
+
+
+#save(surv_reg, file="PhD_4th_yr/Spatial_var_inbreeding/Chapter_wrting/plots/juve_surv_plot_reg.RData")
 
 
 

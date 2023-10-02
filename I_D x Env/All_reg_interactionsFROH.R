@@ -46,15 +46,16 @@ summary(bw_model_inter)
 
 bw_inter=plot(ggpredict(bw_model_inter, terms = c("FROH[all]","Reg","AgeHrs[0]")),show.title=FALSE, colors="metro", line.size=1)+
   labs(x = expression(F["ROH"]), y = "Birth weight (kg)", colour = "Spatial \nregion")+
-  theme(text = element_text(size = 15),legend.position = "none") 
+  theme(text = element_text(size = 15), axis.title.x = element_blank()) 
 bw_inter
 
 ggpredict(bw_model_inter, terms = c("FROH[all]","Reg","AgeHrs[0]"))
 
 bw_trends=emtrends(bw_model_inter, pairwise ~ Reg, var="FROH")
 bw_trends
-test(bw_trends$emtrends)
-7.09 -6.54 
+df_bw=test(bw_trends$emtrends)
+df_bw
+#7.09 -6.54 
 #############################
 ##### winter survival ######
 ############################
@@ -149,22 +150,22 @@ ggpredict(suv_model_inter, terms = c("FROH[all]","Reg","MotherStatus[True yeld]"
 #plot predictions
 inter=plot(ggpredict(suv_model_inter, terms = c("FROH[all]","Reg","MotherStatus[True yeld]")),show.title=FALSE, colors="metro", line.size=1)+
   labs(x = expression(F["ROH"]), y = "Juvenile survival probability", colour = "Spatial \nregion")+
-  theme(text = element_text(size = 15),legend.position = "none") 
+  theme(text = element_text(size = 15)) 
 inter
 
 surv_trends=emtrends(suv_model_inter, pairwise ~  Reg, var=c("FROH"))
 surv_trends
-test(surv_trends$emtrends)
-
+df=test(surv_trends$emtrends)
+df
 
 ## all plots ###
 
-inters=(bw_inter/winter_inter/inter)+plot_annotation(tag_levels = "A")
+inters=(bw_inter/inter)+plot_annotation(tag_levels = "A")+plot_layout(guides = "collect")
 inters
 
 
 ggsave(inters,
        file = "PhD_4th_yr/Spatial_var_inbreeding/Chapter_wrting/plots/All_FROH_interaction.jpeg",
        width = 6,
-       height = 10)
+       height = 7)
 

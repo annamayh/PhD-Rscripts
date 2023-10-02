@@ -7,7 +7,7 @@ library(emmeans)
 setwd("H:/")
 
 surv_loc_df=read.table("PhD_4th_yr/Spatial_var_inbreeding/survival_loc.txt", sep = ",", header = TRUE)%>%
-  select(-MumFROH)%>%
+  select(-MumFROH, -BirthWt)%>%
   na.omit()
 
 
@@ -53,7 +53,7 @@ plot(den_pred)
 
 
 
-surv_den_inter=update(suv_model_simple, ~ . -FROH+ (FROH*AnnualDensity*GrazeType)) ##
+surv_den_inter=update(suv_model_simple, ~ . -FROH+ (FROH*AnnualDensity)) ##
 summary(surv_den_inter)
 den_pred_inter=ggpredict(surv_den_inter, 
                          terms = c("FROH[all]","AnnualDensity[0, 0.00025,0.0005, 0.00075, 0.001, 0.00125,0.0015, 0.00175, 0.002, 0.00225, 0.0025,0.00275, 0.003]"))

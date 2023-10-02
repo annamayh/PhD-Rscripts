@@ -45,7 +45,7 @@ surv_forest=ggplot(data=FROH_sols, aes(x=CHR, y=solution, ymin=CI_lower, ymax=CI
   geom_hline(yintercept=0, lty=2) +  # black line is 0
   coord_flip() +  # flip coordinates (puts labels on y axis)
   labs(x="Chromosome", y="Posterior estimate + CI", 
-       title="Deviation of chromosomal inbreeding effects \nfrom combined effect of all chromosomes", tag = "B") +
+       title="Variation in chromosome-specific inbreeding effects", tag = "B") +
   theme_classic()+  # use a white background                 
   theme(legend.position = "none")+
   scale_color_manual(values=c("grey50","red"),guide=FALSE)+
@@ -184,7 +184,7 @@ suvr_pred_independent=ggplot(data=pred_survival_ind_chr,aes(x=ibc,y=mean_surv_pr
     geom_line(linewidth=1)+
     theme_bw()+
     labs(x="Inbreeding Coefficient", y="Juvenile survival", 
-         colour="Chromosome", title="Predicted survival assuming chromosome independence", tag = "C")+
+         colour="Chromosome", title="Assuming chromosome independence", tag = "C")+
   theme(text = element_text(size = 18), plot.title = element_text(size=13), 
         legend.title = element_text(size=10), 
         legend.text = element_text(size=9))
@@ -254,7 +254,7 @@ combined_chr=ggplot(data=pred_survival_nonind_chr,aes(x=ibc,y=mean_surv_predicti
   geom_line(linewidth=1)+
   theme_bw()+
   labs(x="Inbreeding coefficient", y="Juvenile survival", 
-       title="Predicted survival assuming equal inbreeding \non all chromosomes",tag = "A")+
+       title="Assuming equal inbreeding on all chromosomes",tag = "A")+
   geom_ribbon(aes(ymin = CI_lwr, ymax = CI_upr), alpha = 0.3)+
   theme(text = element_text(size = 18), plot.title = element_text(size=13))+
   geom_point(data=juvenile_surv_df_na_rm_plot, aes(x=FROH_sum_div, y=juvenile_survival), inherit.aes = F, alpha=0.2)
@@ -278,4 +278,38 @@ ggsave(surv_3in1,
        height = 6)
 
 
+## check if effect size is correlted with chr size 
+deermap <- read.csv("PhD_3rdYR/Data_files/Genome_assembly_mCerEla1.1.csv", header = T, stringsAsFactors = F)%>%
+  filter(!CHR %in% c("All","All_auto","X","unplaced"))
+
+
+effect_v_size=FROH_sols%>%inner_join(deermap)%>%
+  select(CHR, length_Mb,solution)
+
+effect_v_size$CHR=as.factor(effect_v_size$CHR)
+
+eff_v_chr=ggplot(effect_v_size, aes(x=length_Mb, y=solution, label=CHR)) +
+  geom_point() +
+  geom_smooth(method=lm, color="red") +
+  geom_text(nudge_x = 3)+
+  theme_classic()+
+  theme(text = element_text(size = 18))+
+  labs(x="Chromosome length (Mb)", y="Slope estimate", tag="D")+
+  stat_cor(method = "pearson",label.x = 110)
+
+
+eff_v_chr    
+
+cor(effect_v_size$length_Mb, effect_v_size$solution)
+
+
+
+surv_4in1=(combined_chr+surv_forest)/(suvr_pred_independent+eff_v_chr)#+plot_annotation(tag_levels = 'A')
+surv_4in1
+
+
+ggsave(surv_4in1,
+       file = "PhD_4th_yr/Inbreeding_depression_models/survival/chapter plots/survival_all4.png",
+       width = 13,
+       height = 12)
 

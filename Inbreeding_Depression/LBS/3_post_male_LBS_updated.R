@@ -49,7 +49,7 @@ male_LBS_zi=
   theme_classic()+  # use a white background                 
   theme(legend.position = "none",
         text = element_text(size = 18), plot.title = element_text(size=14), 
-        axis.text.y = element_text(size=10),axis.title.x = element_text(size=10))+
+        axis.text.y = element_text(size=12),axis.title.x = element_text(size=10))+
   annotate("segment", x = 0, xend = 34, y = FROH_sum_sol_zi, yend = FROH_sum_sol_zi, colour = "mediumseagreen", alpha=0.6, linewidth=1)+
   ##add in estimate of FROHsum
   annotate("pointrange", x = 34, y = FROH_sum_sol_zi, ymin = FROH_sum_zi_upr, ymax = FROH_sum_zi_lwr,
@@ -91,7 +91,7 @@ male_LBS_pois=
   labs(x="Chromosome", y="Posterior mean estimate + CI ", title = "Poisson process") +
   theme_classic()+  # use a white background                 
   theme(legend.position = "none",
-        text = element_text(size = 18), plot.title = element_text(size=14), axis.text.y = element_text(size=10),
+        text = element_text(size = 18), plot.title = element_text(size=14), axis.text.y = element_text(size=12),
         axis.title.y = element_blank(), axis.title.x = element_text(size=10))+
   annotate("segment", x = 0, xend = 34, y = FROH_sum_sol_pois, yend = FROH_sum_sol_pois, colour = "chocolate3", alpha=0.6, linewidth=1)+
   ##add in estimate of FROHsum
@@ -108,14 +108,14 @@ male_LBS_pois
 forest=(male_LBS_zi+male_LBS_pois)
 
 
-p4 <- ggplot(data.frame(l = male_LBS_zi$labels$y, x = 1, y = 1)) +
-  geom_text(aes(x, y, label = l), angle = 0, size=6) + 
-  theme_void() +
-  coord_cartesian(clip = "off")
-
-all_forest=(forest/p4) + plot_layout(heights = c(25,1))
-all_forest
-
+# p4 <- ggplot(data.frame(l = male_LBS_zi$labels$y, x = 1, y = 1)) +
+#   geom_text(aes(x, y, label = l), angle = 0, size=6) + 
+#   theme_void() +
+#   coord_cartesian(clip = "off")
+# 
+# all_forest=(forest/p4) + plot_layout(heights = c(25,1))
+# all_forest
+# 
 
 
 ###################################################################################
@@ -237,7 +237,7 @@ LBS_male_all <- sapply(LBS_male_all, as.numeric)%>%as.data.frame()
 LBS_pred_independent=ggplot(data=LBS_male_all,aes(x=ibc,y=LBS, group=as.factor(CHR), color=as.factor(CHR)))+
   geom_line(linewidth=1)+
   theme_bw()+
-  labs(x="Inbreeding Coefficient", y="LBS", colour="Chromosome", title="Predicted male LBS assuming \nchromosome independence",tag = "C")+
+  labs(x="Inbreeding Coefficient", y="LBS", colour="Chromosome", title="Assuming chromosome independence",tag = "C")+
   theme(text = element_text(size = 18), plot.title = element_text(size=13), 
         legend.title = element_text(size=11), 
         legend.text = element_text(size=9))
@@ -356,3 +356,70 @@ ggsave(LBS_all3,
 
 
 #save(LBSsum_df,LBS_male_all, file="PhD_4th_yr/Inbreeding_depression_models/LBS/Chapter_plots/plot_dfs_male_LBS.RData")
+
+
+## effect size Vs chr size 
+
+
+
+## check if effect size is correlted with chr size 
+deermap <- read.csv("PhD_3rdYR/Data_files/Genome_assembly_mCerEla1.1.csv", header = T, stringsAsFactors = F)%>%
+  filter(!CHR %in% c("All","All_auto","X","unplaced"))
+
+deermap$CHR=as.integer(deermap$CHR)
+
+
+effect_v_size=FROH_sols_zi%>%inner_join(deermap)%>%
+  select(CHR, length_Mb,solution)
+
+
+zi=ggplot(effect_v_size, aes(x=length_Mb, y=solution, label=CHR)) +
+  geom_point() +
+  geom_smooth(method=lm, color="mediumseagreen") +
+  geom_text(nudge_x = 5)+
+  theme_classic()+
+  theme(text = element_text(size = 18), axis.title.x = element_text(size=12))+
+  labs(x="Chromosome length (Mb)", y="Slope estimate for zero inflation")+
+  stat_cor(method = "pearson", label.y=1)
+
+
+
+cor(effect_v_size$length_Mb, effect_v_size$solution)
+
+
+
+effect_v_sizepi=FROH_sols_pois%>%inner_join(deermap)%>%
+  select(CHR, length_Mb,solution)
+
+
+pi=ggplot(effect_v_sizepi, aes(x=length_Mb, y=solution, label=CHR)) +
+  geom_point() +
+  geom_smooth(method=lm, color="chocolate3") +
+  geom_text(nudge_x = 5)+
+  theme_classic()+
+  theme(text = element_text(size = 18), axis.title.x = element_text(size=12))+
+  labs(x="Chromosome length (Mb)", y="Slope estimate for poisson")+
+  stat_cor(method = "pearson")
+
+
+
+chr_v_eff=zi+pi
+chr_v_eff
+
+
+top=LBS_pred_sum+forest+plot_layout(widths = c(4,5))
+
+
+bottom=LBS_pred_independent+chr_v_eff+plot_layout(widths = c(4,5))
+
+LBS_all4=top/bottom
+
+LBS_all4
+
+ggsave(LBS_all4,
+       file = "PhD_4th_yr/Inbreeding_depression_models/LBS/Chapter_plots/male_LBS_all4.png",
+       width = 14,
+       height = 12)
+
+
+

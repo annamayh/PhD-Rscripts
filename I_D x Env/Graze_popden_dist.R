@@ -12,12 +12,12 @@ library(colorspace)
 setwd("H:/")
 
 surv_loc_df=read.table("PhD_4th_yr/Spatial_var_inbreeding/survival_loc.txt", sep = ",", header = TRUE)%>%
-  select(Code, BirthYear,Sex, N, E, Reg)%>%
+  select(Code, MumCode, BirthYear,Sex, N, E, Reg)%>%
   filter(Sex!=3)%>%
   na.omit()
 
 density=read.csv("PhD_4th_yr/Spatial_var_inbreeding/glmmTMB/ValuesforAnna.csv", header=T, stringsAsFactors = F)%>%
-  rename(Code=Name, BirthYear=Year)
+  rename(MumCode=Name, BirthYear=Year)
 
 loc_den_graze=surv_loc_df%>%
   inner_join(density)%>%
@@ -147,9 +147,10 @@ IM_spde_graze  <- inla(y~ -1 + Intercept+Sex + Reg+ f(w, model=spde),
 summary(IM_spde_graze)
 
 inla_graze_plot=ggField(IM_spde_graze, Mesh)+
-  labs(fill = "Grazing Quality \n(as deviation \nfrom the mean)")+
+  labs(fill = "Grazing Quality")+
   theme_bw()+
-  scale_fill_discrete_sequential(palette = "Greens", rev=T)+
+  scale_fill_discrete_sequential(palette = "Greens", rev=T, 
+                                 labels=c("Low", " "," "," "," "," "," "," ","High"))+
   theme(text = element_text(size = 18),
         legend.title=element_text(size=rel(0.8)))
 
@@ -195,7 +196,7 @@ den_pred_plot=den_pred%>%
   geom_pointrange(linewidth=1)+
   theme_bw()+
   scale_color_manual(values = c("#f0a30a" ,"#a20025","#00aba9","chocolate1", "#60a917","#647687"))+
-  labs(x="Spatial region", y=expression(Population~denisty~(ids~per~km^2)))+
+  labs(x="Spatial region", y="Derived population denisty metric")+
   theme(text = element_text(size = 18),legend.position = "none")+
   geom_boxplot(data=loc_den_graze, aes(Reg, AnnualDensity, colour=Reg, alpha=0.1),
                inherit.aes = F, position=position_nudge(x=0.2), width=0.1)
@@ -243,9 +244,9 @@ IM_spde_den  <- inla(y~ -1 + Intercept+Sex + Reg+ f(w, model=spde),
 summary(IM_spde_den)
 
 inla_den_plot=ggField(IM_spde_den, Mesh)+
-  labs(fill = "Density \n (as deviation \nfrom the mean)")+
+  labs(fill = "Derived \npopulation \ndensity")+
   theme_bw()+
-  scale_fill_discrete_sequential(labels=c("-0.38 e^-3", "-0.24 e^-3","-0.16 e^-3","-0.08 e^-3","0.09 e^-3","0.26 e^-3","0.44 e^-3","0.82 e^-3","1.26 e^-3"), 
+  scale_fill_discrete_sequential(labels=c("Low", " "," "," "," "," "," "," ","High"), 
                                  palette = "Purples", rev=T)+
   theme(text = element_text(size = 18),
         legend.title=element_text(size=rel(0.8)))

@@ -12,8 +12,9 @@ setwd("H:/")
 spatial_FROH=read.table("PhD_4th_yr/Spatial_var_inbreeding/survival_loc.txt", sep = ",", header = TRUE)%>%
   filter(!E>1385)%>%
   filter(!N<7997.5)%>% #remove 38 records outside the syudy areas
-  mutate(year_cont=BirthYear-min(BirthYear))#%>% #get cntinuous vairable of birth year
-  #mutate(FROH=FROH*10)
+  mutate(year_cont=BirthYear-min(BirthYear))%>% #get cntinuous vairable of birth year
+  select(Code, BirthYear, Sex, MumCode, FROH, Reg, juvenile_survival)%>%
+  na.omit()
 ###########################################################################################
 ## model selection using INLA
 ############################################################################

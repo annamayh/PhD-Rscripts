@@ -1,6 +1,7 @@
 
 library(tidyverse)
 library(data.table)
+library(ggpubr)
 setwd("H:/")
 load(file="PhD_4th_yr/Inbreeding_depression_models/birth_weight/birth_wt_model_output24072023.RData")
 
@@ -42,7 +43,7 @@ forest=ggplot(data=FROH_sols, aes(x=CHR, y=solution, ymin=CI_lower, ymax=CI_uppe
   geom_pointrange(colour="grey50") + #plots lines based on Y and lower and upper CI
   geom_hline(yintercept=0, lty=2) +  # black line is 0
   coord_flip() +  # flip coordinates (puts labels on y axis)
-  labs(x="Chromosome", y="Posterior estimate + CI", title = "Deviation of chromosomal inbreeding \neffects from combined effect\nof all chromosomes") +
+  labs(x="Chromosome", y="Posterior estimate + CI", title = "Variation in chromosome-specific inbreeding effects") +
   theme_classic()+  # use a white background                 
   theme(legend.position = "none")+
   ## line of FROHsum estimate
@@ -133,7 +134,7 @@ chrind=pred_ibcs_all%>%arrange(CHR)%>%
   ggplot(aes(x=as.numeric(ibc),y=bw_prediction, group=as.factor(CHR), colour=as.factor(CHR)))+
   geom_line(linewidth=1)+
   theme_bw()+
-  labs(x=" Inbreeding coefficient", y="Predicted birth weight (kg)", title="Predicted birth weight assuming \nchromosme independence",colour="Chromosome" )+
+  labs(x=" Inbreeding coefficient", y="Predicted birth weight (kg)", title="Assuming chromosome independence",colour="Chromosome" )+
     theme(text = element_text(size = 18), 
           plot.title = element_text(size=13), 
           legend.title = element_text(size=10),
@@ -221,7 +222,7 @@ birth_wt_df_na_rm_plot=birth_wt_df_na_rm%>%filter(AgeHrs<48)
 chrnonind=ggplot(data=pred_ibcs_mean,aes(x=ibc,y=Mean))+
   geom_line(linewidth=1)+
   theme_bw()+
-  labs(x="Inbreeding coefficient", y="Predicted birth weight (kg)", title="Predicted birth weight assuming \nequal inbreeding on all chromosomes")+
+  labs(x="Inbreeding coefficient", y="Predicted birth weight (kg)", title="Assuming equal inbreeding on all chromosomes")+
   geom_ribbon(aes(ymin = lowerCI, ymax = upperCI), alpha = 0.1)+
   theme(text = element_text(size = 18), 
         plot.title = element_text(size=13))+
@@ -236,11 +237,47 @@ Bw_3in1=chrnonind+forest+chrind+plot_annotation(tag_levels = 'A')
 
 Bw_3in1
 
-ggsave(Bw_3in1,
-       file = "PhD_4th_yr/Inbreeding_depression_models/birth_weight/all3_birthweight_points.png",
-       width = 17,
-       height = 6)
+# ggsave(Bw_3in1,
+#        file = "PhD_4th_yr/Inbreeding_depression_models/birth_weight/all3_birthweight_points.png",
+#        width = 17,
+#        height = 6)
+# 
+
+### effect size Vs chr size
+
+
+## check if effect size is correlted with chr size 
+deermap <- read.csv("PhD_3rdYR/Data_files/Genome_assembly_mCerEla1.1.csv", header = T, stringsAsFactors = F)%>%
+  filter(!CHR %in% c("All","All_auto","X","unplaced"))
+
+
+effect_v_size=FROH_sols%>%inner_join(deermap)%>%
+  select(CHR, length_Mb,solution)
+
+effect_v_size$CHR=as.factor(effect_v_size$CHR)
+
+effect_chr=ggplot(effect_v_size, aes(x=length_Mb, y=solution, label=CHR)) +
+  geom_point() +
+  geom_smooth(method=lm, color="red") +
+  geom_text(nudge_x = 3)+
+  theme_classic()+
+  theme(text = element_text(size = 18))+
+  labs(x="Chromosome length (Mb)", y="Slope estimate")+
+  stat_cor(method = "pearson",label.x = 110)
+
+effect_chr
+
+cor(effect_v_size$length_Mb, effect_v_size$solution)
 
 
 
+Bw_4in1=(chrnonind+forest)/(chrind+effect_chr)+plot_annotation(tag_levels = 'A')
+
+Bw_4in1
+
+
+ggsave(Bw_4in1,
+       file = "PhD_4th_yr/Inbreeding_depression_models/birth_weight/all4_birthweight.png",
+       width = 13,
+       height = 12)
 

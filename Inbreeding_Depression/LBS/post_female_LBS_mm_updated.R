@@ -50,7 +50,7 @@ female_LBS_hu=
   labs(x="Chromosome", y="Posterior mean estimate + CI ",title = "Hurdle", tag = "B") +
   theme_classic()+  # use a white background                 
   theme(legend.position = "none", 
-        axis.title.x = element_text(size=10),text = element_text(size = 18),plot.title = element_text(size=14))+
+        axis.title.x = element_text(size=12),text = element_text(size = 18),plot.title = element_text(size=14))+
   annotate("segment", x = 0, xend = 34, y = FROH_sum_sol_hu, yend = FROH_sum_sol_hu, colour = "mediumseagreen", alpha=0.6, linewidth=1)+
   ##add in estimate of FROHsum
   annotate("pointrange", x = 34, y = FROH_sum_sol_hu, ymin = FROH_sum_hu_upr, ymax = FROH_sum_hu_lwr,
@@ -92,7 +92,7 @@ female_LBS_pois=
   labs(x="Chromosome", y="Posterior mean estimate + CI ", title = "Truncated poisson") +
   theme_classic()+  # use a white background                 
   theme(legend.position = "none", axis.title.y = element_blank(),
-        axis.title.x = element_text(size=10),text = element_text(size = 18),plot.title = element_text(size=14))+
+        axis.title.x = element_text(size=12),text = element_text(size = 18),plot.title = element_text(size=14))+
   annotate("segment", x = 0, xend = 34, y = FROH_sum_sol_pois, yend = FROH_sum_sol_pois, colour = "chocolate3", alpha=0.6, linewidth=1)+
   ##add in estimate of FROHsum
   annotate("pointrange", x = 34, y = FROH_sum_sol_pois, ymin = FROH_sum_pois_upr, ymax = FROH_sum_pois_lwr,
@@ -219,8 +219,8 @@ LBS_female_all <- sapply(LBS_female_all, as.numeric)%>%as.data.frame()
 LBS_pred_independent=ggplot(data=LBS_female_all,aes(x=ibc,y=LBS, group=as.factor(CHR), color=as.factor(CHR)))+
   geom_line(linewidth=1)+
   theme_bw()+
-  labs(x="Inbreeding Coefficient", y="Predicted LBS", 
-       colour="Chromosome", title="Predicted female LBS assuming \nchromosome independence",tag = "C")+
+  labs(x="Inbreeding Coefficient", y="LBS", 
+       colour="Chromosome", title="Assuming chromosome independence",tag = "C")+
   theme(text = element_text(size = 18), plot.title = element_text(size=13), 
        legend.title = element_text(size=11), 
        legend.text = element_text(size=9))
@@ -352,3 +352,66 @@ save(LBSsum_df,LBS_female_all, file="PhD_4th_yr/Inbreeding_depression_models/LBS
 
 
 #     
+## effect size Vs chr size
+
+library(ggpubr)
+deermap <- read.csv("PhD_3rdYR/Data_files/Genome_assembly_mCerEla1.1.csv", header = T, stringsAsFactors = F)%>%
+  filter(!CHR %in% c("All","All_auto","X","unplaced"))
+
+deermap$CHR=as.integer(deermap$CHR)
+
+
+effect_v_size=FROH_sols_hu%>%inner_join(deermap)%>%
+  select(CHR, length_Mb,solution)
+
+
+zi=ggplot(effect_v_size, aes(x=length_Mb, y=solution, label=CHR)) +
+  geom_point() +
+  geom_smooth(method=lm, color="mediumseagreen") +
+  geom_text(nudge_x = 4)+
+  theme_classic()+
+  theme(text = element_text(size = 18), axis.title.x = element_text(size=12))+
+  labs(x="Chromosome length (Mb)", y="Slope estimate for hurdle", tag="D")+
+  stat_cor(method = "pearson")
+
+
+
+cor(effect_v_size$length_Mb, effect_v_size$solution)
+
+
+
+effect_v_sizepi=FROH_sols_pois%>%inner_join(deermap)%>%
+  select(CHR, length_Mb,solution)
+
+
+pi=ggplot(effect_v_sizepi, aes(x=length_Mb, y=solution, label=CHR)) +
+  geom_point() +
+  geom_smooth(method=lm, color="chocolate3") +
+  geom_text(nudge_x = 4)+
+  theme_classic()+
+  theme(text = element_text(size = 18),  axis.title.x = element_text(size=12))+
+  labs(x="Chromosome length (Mb)", y="Slope estimate for Poisson process")+
+  stat_cor(method = "pearson", label.y=0.05)
+
+
+
+eff_v_chr=zi+pi
+eff_v_chr
+
+
+
+top=LBS_pred_sum+forest+plot_layout(widths = c(4,5))
+
+
+bottom=LBS_pred_independent+eff_v_chr+plot_layout(widths = c(4,5))
+
+LBS_all4=top/bottom
+
+LBS_all4
+
+ggsave(LBS_all4,
+       file = "PhD_4th_yr/Inbreeding_depression_models/LBS/Chapter_plots/female_LBS_all4.png",
+       width = 14,
+       height = 12)
+
+

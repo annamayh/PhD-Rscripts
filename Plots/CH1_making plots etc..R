@@ -133,14 +133,14 @@ ROH_size_ids_plot=ggplot(sub_num_grouped_id, aes(x=IID, y=n, fill=sizeKB))+
         axis.ticks.x=element_blank(),
         )
 
-
-
-ggsave(ROH_size_ids_plot, 
-       file="PhD_4th_yr/Chapter_1/Figs/ROH_ids_size_new_cols.png", 
-       width = 12, 
-       height = 6)
-
-
+# 
+# 
+# ggsave(ROH_size_ids_plot, 
+#        file="PhD_4th_yr/Chapter_1/Figs/ROH_ids_size_new_cols.png", 
+#        width = 12, 
+#        height = 6)
+# 
+# 
 
 FROH_split=FROH_full%>%
   dplyr::select(IID, KB, sizeKB)%>%
@@ -164,19 +164,20 @@ sizes_boxplot=ggplot(FROH_split, aes(sizeKB, FROH_size, fill=sizeKB))+
         axis.title.y = element_blank()) +
   labs(y="FROH per size category")
 
+sizes_boxplot
 
-ggsave(sizes_boxplot, 
-       file="PhD_4th_yr/Chapter_1/Figs/ROH_boxplot_new_cols.png", 
-       width = 7, 
-       height = 6)
-
+# ggsave(sizes_boxplot, 
+#        file="PhD_4th_yr/Chapter_1/Figs/ROH_boxplot_new_cols.png", 
+#        width = 7, 
+#        height = 6)
+# 
 
 
 ### FROH evolution ####
 
-db<-"C:\\Users\\s1881212\\Documents\\Deer_database_2022/RedDeer2.05.accdb" #open connection
+db<-"C:\\Users\\s1881212\\Documents\\Deer_database_2022/RedDeer2.05.1.accdb" #open connection
 con<-odbcConnectAccess2007(db)
-year<-sqlFetch(con, "sys_Pedigree")%>%dplyr::select(Code, BirthYear)
+year<-sqlFetch(con, "tbllife")%>%dplyr::select(Code, BirthYear)
 
 odbcClose(con)
 
@@ -187,7 +188,12 @@ FROH_evol=FROH_id%>%dplyr::select(Code, FROH)%>%
   mutate(year_cont=BirthYear-min(BirthYear)) # counting the years from first year of study to fit year as continuous variable 
 
 
-#lmer(FROH~)
+table_birthyr=as.data.frame(table(FROH_evol$BirthYear))%>%mutate(Var1=as.numeric(as.character(Var1)))%>%
+  filter(Var1>"1980")
+
+min(table_birthyr$Freq)
+max(table_birthyr$Freq)
+
 
 
 FROH_evol_means=FROH_evol%>%dplyr::select(BirthYear, FROH)%>%
@@ -225,12 +231,12 @@ FROH_evol_size=ggplot(FROH_split_evol_means2, aes(x=BirthYear, y=mean_FROH_size,
   labs(y = expression(paste("Mean F"[ROH])))
  
 
-ggsave(FROH_evol_size, 
-       file="PhD_4th_yr/Chapter_1/Figs/FROH_evol_sizes.png", 
-       width = 12, 
-       height = 4)
-
-
+# ggsave(FROH_evol_size, 
+#        file="PhD_4th_yr/Chapter_1/Figs/FROH_evol_sizes.png", 
+#        width = 12, 
+#        height = 4)
+# 
+# 
 
 
 

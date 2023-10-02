@@ -35,7 +35,8 @@ froh_per_chr<-full_join(KB_per_chr_per_ID,deermap, by = join_by(CHR))%>%
 
 colnames(froh_per_chr) <- c("Code", paste0("FROH_chr", 1:33),"FROHsum","FROH_sum_div")
 
-
+FROH=read.table("PhD_4th_yr/2023_ROH_search/032023_FROH.txt", header = T)
+  
 
 # write.table(froh_per_chr,
 #             file = "PhD_4th_yr/Inbreeding_depression_models/FROH_per_Chr.txt",
@@ -47,9 +48,12 @@ colnames(froh_per_chr) <- c("Code", paste0("FROH_chr", 1:33),"FROHsum","FROH_sum
 
 
 corr=froh_per_chr%>%
-  select(-Code,-FROHsum,-FROH_sum_div)%>%cor()
+  inner_join(FROH)%>%
+  filter(FROH>0.1)%>%
+  select(-Code,-FROHsum,-FROH_sum_div,-FROH)%>%
+  cor()
 
-cor(froh_per_chr$FROH_chr8, froh_per_chr$FROH_chr22)
+#cor(froh_per_chr$FROH_chr8, froh_per_chr$FROH_chr22)
 
 max(corr[corr<1])
 min(corr)
@@ -60,18 +64,18 @@ min(corr)
 
 corr_matrix=ggcorrplot(corr)+
   #scale_fill_gradient2(low = "white", high = "red", breaks=c(0, 1), limit=c(-0.1, 0.15))
-  scale_fill_gradientn(colours = c("blue", "white", "seagreen"),limit=c(-0.12, 0.14))
+  scale_fill_gradientn(colours = c("blue", "white", "seagreen"),limit=c(-0.35, 0.35))
   
 
 corr_matrix
 
-ggsave(corr_matrix,
-       file = "PhD_4th_yr/Inbreeding_depression_chapter/plots/corr_matrix_chrFROH.png",
-       width = 10,
-       height = 7, 
-       bg = "white")
-
-
+# ggsave(corr_matrix,
+#        file = "PhD_4th_yr/Inbreeding_depression_chapter/plots/corr_matrix_chrFROH.png",
+#        width = 10,
+#        height = 7, 
+#        bg = "white")
+# 
+# 
 
 
 covm=froh_per_chr%>%
